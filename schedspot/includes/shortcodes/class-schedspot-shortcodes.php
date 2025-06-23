@@ -1428,24 +1428,39 @@ class SchedSpot_Shortcodes {
 
         ?>
         <div class="schedspot-customer-dashboard">
-            <!-- Messages Section -->
-            <?php if ( get_option( 'schedspot_enable_messaging', true ) && current_user_can( 'schedspot_read_messages' ) ) : ?>
-                <?php
-                $messaging = new SchedSpot_Messaging();
-                $unread_count = $messaging->get_unread_count( $user_id );
-                ?>
-                <div class="schedspot-messages-section">
-                    <h3>
-                        <?php _e( 'Messages', 'schedspot' ); ?>
-                        <?php if ( $unread_count > 0 ) : ?>
-                            <span class="unread-badge"><?php echo esc_html( $unread_count ); ?></span>
-                        <?php endif; ?>
-                    </h3>
-                    <div class="messages-preview">
-                        <?php echo do_shortcode( '[schedspot_messages]' ); ?>
+            <!-- Quick Stats Section -->
+            <div class="schedspot-dashboard-stats">
+                <h3><?php _e( 'Your Account Overview', 'schedspot' ); ?></h3>
+                <div class="schedspot-stats-grid">
+                    <?php
+                    $total_bookings = count( $bookings );
+                    $pending_bookings = count( array_filter( $bookings, function( $booking ) { return $booking->status === 'pending'; } ) );
+                    $completed_bookings = count( array_filter( $bookings, function( $booking ) { return $booking->status === 'completed'; } ) );
+                    ?>
+                    <div class="stat-item">
+                        <div class="stat-number"><?php echo esc_html( $total_bookings ); ?></div>
+                        <div class="stat-label"><?php _e( 'Total Bookings', 'schedspot' ); ?></div>
                     </div>
+                    <div class="stat-item">
+                        <div class="stat-number"><?php echo esc_html( $pending_bookings ); ?></div>
+                        <div class="stat-label"><?php _e( 'Pending', 'schedspot' ); ?></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number"><?php echo esc_html( $completed_bookings ); ?></div>
+                        <div class="stat-label"><?php _e( 'Completed', 'schedspot' ); ?></div>
+                    </div>
+                    <?php if ( get_option( 'schedspot_enable_messaging', true ) && current_user_can( 'schedspot_read_messages' ) ) : ?>
+                        <?php
+                        $messaging = new SchedSpot_Messaging();
+                        $unread_count = $messaging->get_unread_count( $user_id );
+                        ?>
+                        <div class="stat-item">
+                            <div class="stat-number"><?php echo esc_html( $unread_count ); ?></div>
+                            <div class="stat-label"><?php _e( 'Unread Messages', 'schedspot' ); ?></div>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
+            </div>
 
             <h3><?php _e( 'My Bookings', 'schedspot' ); ?></h3>
             <?php if ( ! empty( $bookings ) ) : ?>
@@ -2475,6 +2490,48 @@ class SchedSpot_Shortcodes {
     }
 
     /**
+     * Enqueue dashboard assets.
+     *
+     * @since 1.0.0
+     */
+    private function enqueue_dashboard_assets() {
+        // Enqueue enhanced CSS file
+        wp_enqueue_style( 'schedspot-frontend-enhanced', SCHEDSPOT_PLUGIN_URL . 'assets/css/frontend-enhanced.css', array(), SCHEDSPOT_VERSION );
+
+        // Enqueue frontend JavaScript
+        wp_enqueue_script( 'schedspot-frontend', SCHEDSPOT_PLUGIN_URL . 'assets/js/frontend.js', array( 'jquery' ), SCHEDSPOT_VERSION, true );
+
+        // Localize script with data
+        wp_localize_script( 'schedspot-frontend', 'schedspot_frontend', array(
+            'rest_url' => rest_url( 'schedspot/v1/' ),
+            'nonce' => wp_create_nonce( 'wp_rest' ),
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'default_avatar' => get_avatar_url( 0 ),
+            'strings' => array(
+                'loading' => __( 'Loading...', 'schedspot' ),
+                'error' => __( 'Error occurred. Please try again.', 'schedspot' ),
+                'success' => __( 'Success!', 'schedspot' ),
+                'confirm' => __( 'Are you sure?', 'schedspot' ),
+                'processing' => __( 'Processing...', 'schedspot' ),
+                'field_required' => __( 'This field is required.', 'schedspot' ),
+                'invalid_email' => __( 'Please enter a valid email address.', 'schedspot' ),
+            ),
+        ) );
+
+        // Enqueue messaging scripts if enabled
+        if ( get_option( 'schedspot_enable_messaging', true ) ) {
+            $messaging = new SchedSpot_Messaging();
+            $messaging->enqueue_frontend_scripts();
+        }
+
+        // Enqueue geolocation scripts if enabled
+        if ( get_option( 'schedspot_enable_geofencing', false ) ) {
+            $geolocation = new SchedSpot_Geolocation();
+            $geolocation->enqueue_frontend_scripts();
+        }
+    }
+
+    /**
      * Messages shortcode.
      *
      * @since 2.0.0
@@ -2504,7 +2561,38 @@ class SchedSpot_Shortcodes {
 
         ?>
         <div class="<?php echo esc_attr( $atts['class'] ); ?>">
-            <div class="schedspot-conversations" id="schedspot-conversations">
+            <!-- Navigation Bar -->
+            <div class="schedspot-navigation">
+                <div class="schedspot-nav-links">
+                    <a href="<?php echo esc_url( $this->get_booking_form_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-calendar-alt"></span>
+                        <?php _e( 'Book a Service', 'schedspot' ); ?>
+                    </a>
+                    <a href="<?php echo esc_url( $this->get_dashboard_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-list-view"></span>
+                        <?php _e( 'My Bookings', 'schedspot' ); ?>
+                    </a>
+                    <?php if ( get_option( 'schedspot_enable_messaging', true ) ) : ?>
+                    <a href="<?php echo esc_url( $this->get_messages_url() ); ?>" class="schedspot-nav-link active">
+                        <span class="dashicons dashicons-email-alt"></span>
+                        <?php _e( 'Messages', 'schedspot' ); ?>
+                    </a>
+                    <?php endif; ?>
+                    <a href="<?php echo esc_url( $this->get_profile_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-admin-users"></span>
+                        <?php _e( 'Profile/Settings', 'schedspot' ); ?>
+                    </a>
+                    <?php if ( current_user_can( 'manage_options' ) ) : ?>
+                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-role-switcher' ); ?>" class="schedspot-nav-link admin-switcher">
+                        <span class="dashicons dashicons-admin-settings"></span>
+                        <?php printf( __( 'Admin: %s', 'schedspot' ), $this->get_role_display_name( SchedSpot()->get_effective_user_role() ) ); ?>
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="schedspot-messages-content">
+                <div class="schedspot-conversations" id="schedspot-conversations">
                 <div class="conversations-header">
                     <h3><?php _e( 'Conversations', 'schedspot' ); ?></h3>
                 </div>
@@ -2838,8 +2926,22 @@ class SchedSpot_Shortcodes {
             color: #0277bd;
         }
 
+        .schedspot-messaging {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .schedspot-messages-content {
+            display: flex;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
         @media (max-width: 768px) {
-            .schedspot-messaging {
+            .schedspot-messages-content {
                 flex-direction: column;
                 height: auto;
             }
@@ -2854,6 +2956,8 @@ class SchedSpot_Shortcodes {
             }
         }
         </style>
+            </div> <!-- Close schedspot-messages-content -->
+        </div> <!-- Close schedspot-messaging -->
         <?php
 
         return ob_get_clean();

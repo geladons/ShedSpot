@@ -1341,6 +1341,135 @@ class SchedSpot_Admin {
     }
 
     /**
+     * Render edit booking form.
+     *
+     * @since 1.0.0
+     * @param int $booking_id Booking ID.
+     */
+    private function render_edit_booking_form( $booking_id ) {
+        $booking = new SchedSpot_Booking( $booking_id );
+
+        if ( ! $booking->id ) {
+            echo '<div class="notice notice-error"><p>' . __( 'Booking not found.', 'schedspot' ) . '</p></div>';
+            return;
+        }
+
+        $workers = get_users( array( 'role' => 'schedspot_worker' ) );
+        $services = SchedSpot_Service::get_services();
+
+        ?>
+        <div class="wrap">
+            <h1><?php printf( __( 'Edit Booking #%d', 'schedspot' ), $booking->id ); ?></h1>
+
+            <a href="<?php echo admin_url( 'admin.php?page=schedspot-bookings' ); ?>" class="button"><?php _e( '← Back to Bookings', 'schedspot' ); ?></a>
+
+            <form method="post" action="">
+                <?php wp_nonce_field( 'schedspot_booking_form', 'schedspot_booking_nonce' ); ?>
+                <input type="hidden" name="schedspot_booking_action" value="edit">
+                <input type="hidden" name="booking_id" value="<?php echo esc_attr( $booking->id ); ?>">
+
+                <table class="form-table">
+                    <tr>
+                        <th scope="row"><?php _e( 'Client Name', 'schedspot' ); ?></th>
+                        <td>
+                            <input type="text" name="client_name" value="<?php echo esc_attr( $booking->client_details['name'] ); ?>" class="regular-text" required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Client Email', 'schedspot' ); ?></th>
+                        <td>
+                            <input type="email" name="client_email" value="<?php echo esc_attr( $booking->client_details['email'] ); ?>" class="regular-text" required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Client Phone', 'schedspot' ); ?></th>
+                        <td>
+                            <input type="tel" name="client_phone" value="<?php echo esc_attr( $booking->client_details['phone'] ); ?>" class="regular-text">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Service', 'schedspot' ); ?></th>
+                        <td>
+                            <select name="service_id" required>
+                                <option value=""><?php _e( 'Select Service', 'schedspot' ); ?></option>
+                                <?php foreach ( $services as $service ) : ?>
+                                    <option value="<?php echo esc_attr( $service->id ); ?>" <?php selected( $booking->service_id, $service->id ); ?>>
+                                        <?php echo esc_html( $service->name ); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Worker', 'schedspot' ); ?></th>
+                        <td>
+                            <select name="worker_id">
+                                <option value=""><?php _e( 'Auto-assign', 'schedspot' ); ?></option>
+                                <?php foreach ( $workers as $worker ) : ?>
+                                    <option value="<?php echo esc_attr( $worker->ID ); ?>" <?php selected( $booking->worker_id, $worker->ID ); ?>>
+                                        <?php echo esc_html( $worker->display_name ); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Date', 'schedspot' ); ?></th>
+                        <td>
+                            <input type="date" name="booking_date" value="<?php echo esc_attr( $booking->booking_date ); ?>" required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Start Time', 'schedspot' ); ?></th>
+                        <td>
+                            <input type="time" name="start_time" value="<?php echo esc_attr( substr( $booking->start_time, 0, 5 ) ); ?>" required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Duration (minutes)', 'schedspot' ); ?></th>
+                        <td>
+                            <input type="number" name="duration" value="<?php echo esc_attr( $booking->duration ); ?>" min="15" step="15" required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Status', 'schedspot' ); ?></th>
+                        <td>
+                            <select name="status">
+                                <?php foreach ( SchedSpot_Booking::get_booking_statuses() as $status_key => $status_label ) : ?>
+                                    <option value="<?php echo esc_attr( $status_key ); ?>" <?php selected( $booking->status, $status_key ); ?>>
+                                        <?php echo esc_html( $status_label ); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Total Cost', 'schedspot' ); ?></th>
+                        <td>
+                            <input type="number" name="total_cost" value="<?php echo esc_attr( $booking->total_cost ); ?>" step="0.01" min="0">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Notes', 'schedspot' ); ?></th>
+                        <td>
+                            <textarea name="notes" rows="4" cols="50"><?php echo esc_textarea( $booking->notes ); ?></textarea>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php _e( 'Address', 'schedspot' ); ?></th>
+                        <td>
+                            <textarea name="client_address" rows="3" cols="50"><?php echo esc_textarea( $booking->client_details['address'] ); ?></textarea>
+                        </td>
+                    </tr>
+                </table>
+
+                <?php submit_button( __( 'Update Booking', 'schedspot' ) ); ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    /**
      * Render booking messages.
      *
      * @since 1.0.0
@@ -2239,6 +2368,9 @@ class SchedSpot_Admin {
                 <?php submit_button( __( 'Update Worker', 'schedspot' ) ); ?>
             </form>
 
+            <h2><?php _e( 'Service Assignments', 'schedspot' ); ?></h2>
+            <?php $this->render_worker_service_assignments( $worker ); ?>
+
             <h2><?php _e( 'Worker Statistics', 'schedspot' ); ?></h2>
             <?php $this->render_worker_statistics( $worker ); ?>
         </div>
@@ -2494,6 +2626,117 @@ class SchedSpot_Admin {
     }
 
     /**
+     * Render worker service assignments.
+     *
+     * @since 1.0.0
+     * @param SchedSpot_Worker $worker Worker object.
+     */
+    private function render_worker_service_assignments( $worker ) {
+        $assigned_services = $worker->get_services();
+        $all_services = SchedSpot_Service::get_services();
+        $available_services = array();
+
+        // Filter out already assigned services
+        foreach ( $all_services as $service ) {
+            $is_assigned = false;
+            foreach ( $assigned_services as $assigned ) {
+                if ( $assigned['id'] == $service->id ) {
+                    $is_assigned = true;
+                    break;
+                }
+            }
+            if ( ! $is_assigned ) {
+                $available_services[] = $service;
+            }
+        }
+
+        ?>
+        <div class="schedspot-service-assignments">
+            <h3><?php _e( 'Currently Assigned Services', 'schedspot' ); ?></h3>
+            <?php if ( ! empty( $assigned_services ) ) : ?>
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th><?php _e( 'Service', 'schedspot' ); ?></th>
+                            <th><?php _e( 'Category', 'schedspot' ); ?></th>
+                            <th><?php _e( 'Base Price', 'schedspot' ); ?></th>
+                            <th><?php _e( 'Custom Price', 'schedspot' ); ?></th>
+                            <th><?php _e( 'Actions', 'schedspot' ); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $assigned_services as $service ) : ?>
+                            <tr>
+                                <td><?php echo esc_html( $service['name'] ); ?></td>
+                                <td><?php echo esc_html( $service['category'] ); ?></td>
+                                <td>$<?php echo esc_html( number_format( $service['base_price'], 2 ) ); ?></td>
+                                <td>
+                                    <form method="post" action="" style="display: inline;">
+                                        <?php wp_nonce_field( 'schedspot_update_service_price', 'schedspot_service_price_nonce' ); ?>
+                                        <input type="hidden" name="schedspot_worker_action" value="update_service_price">
+                                        <input type="hidden" name="worker_id" value="<?php echo esc_attr( $worker->id ); ?>">
+                                        <input type="hidden" name="service_id" value="<?php echo esc_attr( $service['id'] ); ?>">
+                                        <input type="number" name="custom_price" value="<?php echo esc_attr( $service['custom_price'] ); ?>" step="0.01" min="0" style="width: 80px;">
+                                        <button type="submit" class="button button-small"><?php _e( 'Update', 'schedspot' ); ?></button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <form method="post" action="" style="display: inline;">
+                                        <?php wp_nonce_field( 'schedspot_remove_service', 'schedspot_remove_service_nonce' ); ?>
+                                        <input type="hidden" name="schedspot_worker_action" value="remove_service">
+                                        <input type="hidden" name="worker_id" value="<?php echo esc_attr( $worker->id ); ?>">
+                                        <input type="hidden" name="service_id" value="<?php echo esc_attr( $service['id'] ); ?>">
+                                        <button type="submit" class="button button-small button-link-delete" onclick="return confirm('<?php esc_attr_e( 'Are you sure you want to remove this service assignment?', 'schedspot' ); ?>')"><?php _e( 'Remove', 'schedspot' ); ?></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else : ?>
+                <p><?php _e( 'No services assigned to this worker.', 'schedspot' ); ?></p>
+            <?php endif; ?>
+
+            <?php if ( ! empty( $available_services ) ) : ?>
+                <h3><?php _e( 'Assign New Service', 'schedspot' ); ?></h3>
+                <form method="post" action="">
+                    <?php wp_nonce_field( 'schedspot_assign_service', 'schedspot_assign_service_nonce' ); ?>
+                    <input type="hidden" name="schedspot_worker_action" value="assign_service">
+                    <input type="hidden" name="worker_id" value="<?php echo esc_attr( $worker->id ); ?>">
+
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row"><label for="service_id"><?php _e( 'Service', 'schedspot' ); ?></label></th>
+                            <td>
+                                <select id="service_id" name="service_id" required>
+                                    <option value=""><?php _e( 'Select a service', 'schedspot' ); ?></option>
+                                    <?php foreach ( $available_services as $service ) : ?>
+                                        <option value="<?php echo esc_attr( $service->id ); ?>">
+                                            <?php echo esc_html( $service->name . ' - $' . number_format( $service->base_price, 2 ) ); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="custom_price"><?php _e( 'Custom Price', 'schedspot' ); ?></label></th>
+                            <td>
+                                <input type="number" id="custom_price" name="custom_price" step="0.01" min="0" placeholder="<?php esc_attr_e( 'Leave empty to use base price', 'schedspot' ); ?>">
+                                <p class="description"><?php _e( 'Set a custom price for this worker, or leave empty to use the service base price.', 'schedspot' ); ?></p>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <?php submit_button( __( 'Assign Service', 'schedspot' ), 'secondary' ); ?>
+                </form>
+            <?php else : ?>
+                <p><em><?php _e( 'All available services are already assigned to this worker.', 'schedspot' ); ?></em></p>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
+    /**
      * Render worker statistics.
      *
      * @since 1.0.0
@@ -2628,6 +2871,86 @@ class SchedSpot_Admin {
             add_action( 'admin_notices', function() {
                 echo '<div class="notice notice-success"><p>' . __( 'Availability updated successfully.', 'schedspot' ) . '</p></div>';
             } );
+        } elseif ( $action === 'assign_service' ) {
+            if ( ! wp_verify_nonce( $_POST['schedspot_assign_service_nonce'], 'schedspot_assign_service' ) ) {
+                wp_die( __( 'Security check failed.', 'schedspot' ) );
+            }
+
+            $worker_id = absint( $_POST['worker_id'] );
+            $service_id = absint( $_POST['service_id'] );
+            $custom_price = ! empty( $_POST['custom_price'] ) ? floatval( $_POST['custom_price'] ) : null;
+
+            $service = new SchedSpot_Service( $service_id );
+            if ( $service->id ) {
+                $result = $service->assign_worker( $worker_id, $custom_price );
+
+                if ( $result ) {
+                    add_action( 'admin_notices', function() {
+                        echo '<div class="notice notice-success"><p>' . __( 'Service assigned successfully.', 'schedspot' ) . '</p></div>';
+                    } );
+                } else {
+                    add_action( 'admin_notices', function() {
+                        echo '<div class="notice notice-error"><p>' . __( 'Failed to assign service.', 'schedspot' ) . '</p></div>';
+                    } );
+                }
+            }
+        } elseif ( $action === 'remove_service' ) {
+            if ( ! wp_verify_nonce( $_POST['schedspot_remove_service_nonce'], 'schedspot_remove_service' ) ) {
+                wp_die( __( 'Security check failed.', 'schedspot' ) );
+            }
+
+            $worker_id = absint( $_POST['worker_id'] );
+            $service_id = absint( $_POST['service_id'] );
+
+            global $wpdb;
+            $result = $wpdb->delete(
+                $wpdb->prefix . 'schedspot_worker_services',
+                array(
+                    'worker_id' => $worker_id,
+                    'service_id' => $service_id
+                ),
+                array( '%d', '%d' )
+            );
+
+            if ( $result !== false ) {
+                add_action( 'admin_notices', function() {
+                    echo '<div class="notice notice-success"><p>' . __( 'Service removed successfully.', 'schedspot' ) . '</p></div>';
+                } );
+            } else {
+                add_action( 'admin_notices', function() {
+                    echo '<div class="notice notice-error"><p>' . __( 'Failed to remove service.', 'schedspot' ) . '</p></div>';
+                } );
+            }
+        } elseif ( $action === 'update_service_price' ) {
+            if ( ! wp_verify_nonce( $_POST['schedspot_service_price_nonce'], 'schedspot_update_service_price' ) ) {
+                wp_die( __( 'Security check failed.', 'schedspot' ) );
+            }
+
+            $worker_id = absint( $_POST['worker_id'] );
+            $service_id = absint( $_POST['service_id'] );
+            $custom_price = floatval( $_POST['custom_price'] );
+
+            global $wpdb;
+            $result = $wpdb->update(
+                $wpdb->prefix . 'schedspot_worker_services',
+                array( 'custom_price' => $custom_price ),
+                array(
+                    'worker_id' => $worker_id,
+                    'service_id' => $service_id
+                ),
+                array( '%f' ),
+                array( '%d', '%d' )
+            );
+
+            if ( $result !== false ) {
+                add_action( 'admin_notices', function() {
+                    echo '<div class="notice notice-success"><p>' . __( 'Service price updated successfully.', 'schedspot' ) . '</p></div>';
+                } );
+            } else {
+                add_action( 'admin_notices', function() {
+                    echo '<div class="notice notice-error"><p>' . __( 'Failed to update service price.', 'schedspot' ) . '</p></div>';
+                } );
+            }
         }
     }
 
