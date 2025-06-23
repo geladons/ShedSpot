@@ -252,6 +252,102 @@ final class SchedSpot_Core {
     public function ajax_url() {
         return admin_url( 'admin-ajax.php', 'relative' );
     }
+
+    /**
+     * Get effective user role considering admin role switching.
+     *
+     * @since 1.0.0
+     * @param int $user_id User ID (optional, defaults to current user).
+     * @return string Effective user role.
+     */
+    public function get_effective_user_role( $user_id = 0 ) {
+        if ( ! $user_id ) {
+            $user_id = get_current_user_id();
+        }
+
+        $user = get_userdata( $user_id );
+        if ( ! $user ) {
+            return '';
+        }
+
+        // Check if current user is admin and has role switching enabled
+        if ( current_user_can( 'manage_options' ) ) {
+            $admin_role_mode = get_user_meta( get_current_user_id(), 'schedspot_admin_role_mode', true );
+            $impersonate_user = get_user_meta( get_current_user_id(), 'schedspot_admin_impersonate_user', true );
+
+            // If admin is impersonating another user, get that user's role
+            if ( $impersonate_user && $impersonate_user != get_current_user_id() ) {
+                $impersonate_user_obj = get_userdata( $impersonate_user );
+                if ( $impersonate_user_obj ) {
+                    return $this->get_user_primary_schedspot_role( $impersonate_user_obj );
+                }
+            }
+
+            // If admin has switched role mode, return that role
+            if ( $admin_role_mode && $admin_role_mode !== 'administrator' ) {
+                return $admin_role_mode;
+            }
+        }
+
+        // Return user's actual primary SchedSpot role
+        return $this->get_user_primary_schedspot_role( $user );
+    }
+
+    /**
+     * Get user's primary SchedSpot role.
+     *
+     * @since 1.0.0
+     * @param WP_User $user User object.
+     * @return string Primary SchedSpot role.
+     */
+    private function get_user_primary_schedspot_role( $user ) {
+        if ( in_array( 'schedspot_customer', $user->roles ) ) {
+            return 'schedspot_customer';
+        } elseif ( in_array( 'schedspot_worker', $user->roles ) ) {
+            return 'schedspot_worker';
+        } elseif ( in_array( 'administrator', $user->roles ) ) {
+            return 'administrator';
+        }
+
+        return '';
+    }
+
+    /**
+     * Check if current user has effective capability considering role switching.
+     *
+     * @since 1.0.0
+     * @param string $capability Capability to check.
+     * @return bool Whether user has the capability.
+     */
+    public function current_user_can_effective( $capability ) {
+        // If admin is in role switching mode, check capabilities for that role
+        if ( current_user_can( 'manage_options' ) ) {
+            $effective_role = $this->get_effective_user_role();
+
+            if ( $effective_role === 'schedspot_worker' ) {
+                $worker_caps = array(
+                    'schedspot_manage_bookings' => true,
+                    'schedspot_view_own_bookings' => true,
+                    'schedspot_send_messages' => true,
+                    'schedspot_read_messages' => true,
+                    'schedspot_manage_availability' => true,
+                    'schedspot_manage_profile' => true,
+                );
+                return isset( $worker_caps[ $capability ] ) ? $worker_caps[ $capability ] : false;
+            } elseif ( $effective_role === 'schedspot_customer' ) {
+                $customer_caps = array(
+                    'schedspot_create_booking' => true,
+                    'schedspot_view_own_bookings' => true,
+                    'schedspot_send_messages' => true,
+                    'schedspot_read_messages' => true,
+                );
+                return isset( $customer_caps[ $capability ] ) ? $customer_caps[ $capability ] : false;
+            }
+        }
+
+        // Default to WordPress capability check
+        return current_user_can( $capability );
+    }
 }
 
 /**

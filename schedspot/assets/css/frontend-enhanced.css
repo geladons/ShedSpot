@@ -1,0 +1,429 @@
+/* SchedSpot Enhanced Frontend Styles */
+
+/* Navigation Bar */
+.schedspot-navigation {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    padding: 15px;
+}
+
+.schedspot-nav-links {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.schedspot-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+.schedspot-nav-link:hover {
+    background: #e9ecef;
+    border-color: #0073aa;
+    color: #0073aa;
+    text-decoration: none;
+}
+
+.schedspot-nav-link.active {
+    background: #0073aa;
+    border-color: #0073aa;
+    color: #fff;
+}
+
+.schedspot-nav-link.admin-switcher {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+    margin-left: auto;
+}
+
+.schedspot-nav-link.admin-switcher:hover {
+    background: #c82333;
+    border-color: #c82333;
+}
+
+/* Dashboard Header */
+.schedspot-dashboard-header {
+    margin-bottom: 30px;
+}
+
+.schedspot-dashboard-header h2 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.schedspot-dashboard-header .user-role {
+    color: #666;
+    font-size: 14px;
+    margin: 0;
+}
+
+.admin-mode-indicator {
+    background: #dc3545;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+/* Enhanced Worker Settings Modal */
+.schedspot-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.schedspot-settings-modal .schedspot-modal-content {
+    background-color: #fefefe;
+    margin: 2% auto;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.schedspot-modal-header {
+    background: #0073aa;
+    color: #fff;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.schedspot-modal-header h3 {
+    margin: 0;
+    color: #fff;
+}
+
+.schedspot-modal-close {
+    color: #fff;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.schedspot-modal-close:hover {
+    opacity: 0.7;
+}
+
+.schedspot-modal-body {
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Settings Tabs */
+.schedspot-settings-tabs {
+    display: flex;
+    height: 100%;
+}
+
+.settings-tab-nav {
+    background: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    width: 200px;
+    padding: 0;
+}
+
+.settings-tab-btn {
+    display: block;
+    width: 100%;
+    padding: 15px 20px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #dee2e6;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.settings-tab-btn:hover {
+    background: #e9ecef;
+}
+
+.settings-tab-btn.active {
+    background: #0073aa;
+    color: #fff;
+}
+
+.settings-tab-content {
+    flex: 1;
+    padding: 20px;
+}
+
+.settings-tab-pane {
+    display: none;
+}
+
+.settings-tab-pane.active {
+    display: block;
+}
+
+/* Form Styling */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.1);
+}
+
+/* Schedule Grid */
+.schedule-grid {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.schedule-day {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    background: #f9f9f9;
+}
+
+.schedule-day h5 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.time-inputs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.time-inputs input[type="time"] {
+    width: auto;
+    flex: 1;
+}
+
+/* Services List */
+.services-list {
+    margin-bottom: 20px;
+}
+
+.service-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background: #f9f9f9;
+}
+
+.service-info {
+    flex: 1;
+}
+
+.service-info label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.service-info p {
+    margin: 5px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.service-pricing {
+    width: 150px;
+    margin-left: 20px;
+}
+
+.service-pricing label {
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.service-pricing input {
+    width: 100%;
+}
+
+/* Earnings Summary */
+.earnings-summary {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.earnings-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.earnings-stats .stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.earnings-stats .label {
+    font-weight: 600;
+    color: #333;
+}
+
+.earnings-stats .value {
+    font-weight: bold;
+    color: #0073aa;
+}
+
+/* Buttons */
+.schedspot-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.schedspot-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.schedspot-btn-primary {
+    background: #0073aa;
+    border-color: #0073aa;
+    color: #fff;
+}
+
+.schedspot-btn-primary:hover {
+    background: #005a87;
+    border-color: #005a87;
+}
+
+/* Admin Dashboard */
+.admin-dashboard-notice {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 5px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.admin-dashboard-notice h3 {
+    margin: 0 0 10px 0;
+    color: #0c5460;
+}
+
+.admin-dashboard-notice p {
+    margin: 0 0 15px 0;
+    color: #0c5460;
+}
+
+.admin-quick-links {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .schedspot-nav-links {
+        flex-direction: column;
+    }
+    
+    .schedspot-nav-link.admin-switcher {
+        margin-left: 0;
+    }
+    
+    .schedspot-settings-tabs {
+        flex-direction: column;
+    }
+    
+    .settings-tab-nav {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .settings-tab-nav {
+        display: flex;
+        overflow-x: auto;
+    }
+    
+    .settings-tab-btn {
+        white-space: nowrap;
+        border-bottom: none;
+        border-right: 1px solid #dee2e6;
+    }
+    
+    .service-item {
+        flex-direction: column;
+    }
+    
+    .service-pricing {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 15px;
+    }
+    
+    .earnings-stats {
+        grid-template-columns: 1fr;
+    }
+}

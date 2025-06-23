@@ -38,6 +38,8 @@ class SchedSpot_Admin {
         add_action( 'admin_init', array( $this, 'admin_init' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'admin_scripts' ) );
         add_filter( 'plugin_action_links_' . SCHEDSPOT_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
+        add_action( 'wp_ajax_schedspot_switch_role', array( $this, 'handle_role_switch' ) );
+        add_action( 'admin_bar_menu', array( $this, 'add_admin_bar_role_switcher' ), 100 );
     }
 
     /**
@@ -96,6 +98,16 @@ class SchedSpot_Admin {
             'schedspot-settings',
             array( $this, 'settings_page' )
         );
+
+        // Role Switcher submenu
+        add_submenu_page(
+            'schedspot',
+            __( 'Role Switcher', 'schedspot' ),
+            __( 'Role Switcher', 'schedspot' ),
+            'manage_options',
+            'schedspot-role-switcher',
+            array( $this, 'role_switcher_page' )
+        );
     }
 
     /**
@@ -131,6 +143,37 @@ class SchedSpot_Admin {
         register_setting( 'schedspot_calendar_settings', 'schedspot_gcal_client_id' );
         register_setting( 'schedspot_calendar_settings', 'schedspot_gcal_client_secret' );
         register_setting( 'schedspot_calendar_settings', 'schedspot_gcal_calendar_id' );
+
+        // SMS settings
+        register_setting( 'schedspot_sms_settings', 'schedspot_sms_enabled' );
+        register_setting( 'schedspot_sms_settings', 'schedspot_sms_provider' );
+        register_setting( 'schedspot_sms_settings', 'schedspot_twilio_account_sid' );
+        register_setting( 'schedspot_sms_settings', 'schedspot_twilio_auth_token' );
+        register_setting( 'schedspot_sms_settings', 'schedspot_twilio_phone_number' );
+        register_setting( 'schedspot_sms_settings', 'schedspot_sms_booking_notifications' );
+        register_setting( 'schedspot_sms_settings', 'schedspot_sms_message_notifications' );
+
+        // Messaging settings
+        register_setting( 'schedspot_messaging_settings', 'schedspot_enable_messaging' );
+        register_setting( 'schedspot_messaging_settings', 'schedspot_allow_file_attachments' );
+        register_setting( 'schedspot_messaging_settings', 'schedspot_max_file_size' );
+        register_setting( 'schedspot_messaging_settings', 'schedspot_allowed_file_types' );
+        register_setting( 'schedspot_messaging_settings', 'schedspot_message_retention_days' );
+
+        // Email notification settings
+        register_setting( 'schedspot_email_settings', 'schedspot_email_notifications_enabled' );
+        register_setting( 'schedspot_email_settings', 'schedspot_admin_email' );
+        register_setting( 'schedspot_email_settings', 'schedspot_email_from_name' );
+        register_setting( 'schedspot_email_settings', 'schedspot_email_from_address' );
+        register_setting( 'schedspot_email_settings', 'schedspot_booking_confirmation_template' );
+        register_setting( 'schedspot_email_settings', 'schedspot_booking_reminder_template' );
+
+        // Advanced settings
+        register_setting( 'schedspot_advanced_settings', 'schedspot_enable_debug_mode' );
+        register_setting( 'schedspot_advanced_settings', 'schedspot_cache_duration' );
+        register_setting( 'schedspot_advanced_settings', 'schedspot_api_rate_limit' );
+        register_setting( 'schedspot_advanced_settings', 'schedspot_cleanup_old_data' );
+        register_setting( 'schedspot_advanced_settings', 'schedspot_data_retention_days' );
 
         // Add settings sections
         add_settings_section(
@@ -458,7 +501,10 @@ class SchedSpot_Admin {
                 <a href="?page=schedspot-settings&tab=payment" class="nav-tab <?php echo $active_tab == 'payment' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Payment', 'schedspot' ); ?></a>
                 <a href="?page=schedspot-settings&tab=calendar" class="nav-tab <?php echo $active_tab == 'calendar' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Calendar', 'schedspot' ); ?></a>
                 <a href="?page=schedspot-settings&tab=sms" class="nav-tab <?php echo $active_tab == 'sms' ? 'nav-tab-active' : ''; ?>"><?php _e( 'SMS', 'schedspot' ); ?></a>
+                <a href="?page=schedspot-settings&tab=messaging" class="nav-tab <?php echo $active_tab == 'messaging' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Messaging', 'schedspot' ); ?></a>
+                <a href="?page=schedspot-settings&tab=email" class="nav-tab <?php echo $active_tab == 'email' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Email', 'schedspot' ); ?></a>
                 <a href="?page=schedspot-settings&tab=geolocation" class="nav-tab <?php echo $active_tab == 'geolocation' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Geolocation', 'schedspot' ); ?></a>
+                <a href="?page=schedspot-settings&tab=advanced" class="nav-tab <?php echo $active_tab == 'advanced' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Advanced', 'schedspot' ); ?></a>
             </h2>
             
             <?php if ( $active_tab == 'calendar' ) : ?>
@@ -489,6 +535,303 @@ class SchedSpot_Admin {
             <?php endif; ?>
         </div>
         <?php
+    }
+
+    /**
+     * Role switcher page callback.
+     *
+     * @since 1.0.0
+     */
+    public function role_switcher_page() {
+        // Handle role switch request
+        if ( isset( $_POST['switch_role'] ) && wp_verify_nonce( $_POST['_wpnonce'], 'schedspot_switch_role' ) ) {
+            $this->process_role_switch();
+        }
+
+        $current_user = wp_get_current_user();
+        $current_role = $this->get_current_admin_role_mode();
+        ?>
+        <div class="wrap">
+            <h1><?php _e( 'Admin Role Switcher', 'schedspot' ); ?></h1>
+
+            <div class="schedspot-role-switcher">
+                <div class="current-role-info">
+                    <h3><?php _e( 'Current Mode', 'schedspot' ); ?></h3>
+                    <p><strong><?php echo esc_html( $this->get_role_display_name( $current_role ) ); ?></strong></p>
+                    <p><?php _e( 'You are currently viewing the system as:', 'schedspot' ); ?>
+                       <em><?php echo esc_html( $this->get_role_description( $current_role ) ); ?></em>
+                    </p>
+                </div>
+
+                <div class="role-switch-form">
+                    <h3><?php _e( 'Switch to Different Role', 'schedspot' ); ?></h3>
+                    <form method="post" action="">
+                        <?php wp_nonce_field( 'schedspot_switch_role' ); ?>
+
+                        <table class="form-table">
+                            <tr>
+                                <th scope="row"><?php _e( 'Switch to Role', 'schedspot' ); ?></th>
+                                <td>
+                                    <select name="target_role" required>
+                                        <option value=""><?php _e( 'Select a role...', 'schedspot' ); ?></option>
+                                        <option value="administrator" <?php selected( $current_role, 'administrator' ); ?>><?php _e( 'Administrator (Default)', 'schedspot' ); ?></option>
+                                        <option value="schedspot_worker" <?php selected( $current_role, 'schedspot_worker' ); ?>><?php _e( 'Worker View', 'schedspot' ); ?></option>
+                                        <option value="schedspot_customer" <?php selected( $current_role, 'schedspot_customer' ); ?>><?php _e( 'Customer View', 'schedspot' ); ?></option>
+                                    </select>
+                                    <p class="description"><?php _e( 'Switch your view to test different user experiences without logging out.', 'schedspot' ); ?></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><?php _e( 'Test User (Optional)', 'schedspot' ); ?></th>
+                                <td>
+                                    <select name="test_user_id">
+                                        <option value=""><?php _e( 'Use current admin account', 'schedspot' ); ?></option>
+                                        <?php
+                                        $workers = get_users( array( 'role' => 'schedspot_worker', 'number' => 20 ) );
+                                        foreach ( $workers as $worker ) {
+                                            echo '<option value="' . esc_attr( $worker->ID ) . '">' . esc_html( $worker->display_name . ' (Worker)' ) . '</option>';
+                                        }
+
+                                        $customers = get_users( array( 'role' => 'schedspot_customer', 'number' => 20 ) );
+                                        foreach ( $customers as $customer ) {
+                                            echo '<option value="' . esc_attr( $customer->ID ) . '">' . esc_html( $customer->display_name . ' (Customer)' ) . '</option>';
+                                        }
+                                        ?>
+                                    </select>
+                                    <p class="description"><?php _e( 'Optionally impersonate a specific user to test their exact experience.', 'schedspot' ); ?></p>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p class="submit">
+                            <input type="submit" name="switch_role" class="button-primary" value="<?php _e( 'Switch Role', 'schedspot' ); ?>" />
+                            <?php if ( $current_role !== 'administrator' ) : ?>
+                                <a href="<?php echo wp_nonce_url( admin_url( 'admin.php?page=schedspot-role-switcher&reset_role=1' ), 'schedspot_reset_role' ); ?>" class="button"><?php _e( 'Reset to Administrator', 'schedspot' ); ?></a>
+                            <?php endif; ?>
+                        </p>
+                    </form>
+                </div>
+
+                <div class="role-descriptions">
+                    <h3><?php _e( 'Role Descriptions', 'schedspot' ); ?></h3>
+                    <div class="role-description-grid">
+                        <div class="role-desc">
+                            <h4><?php _e( 'Administrator', 'schedspot' ); ?></h4>
+                            <p><?php _e( 'Full access to all plugin features, settings, and management capabilities.', 'schedspot' ); ?></p>
+                        </div>
+                        <div class="role-desc">
+                            <h4><?php _e( 'Worker View', 'schedspot' ); ?></h4>
+                            <p><?php _e( 'Experience the system as a service provider - manage bookings, availability, and earnings.', 'schedspot' ); ?></p>
+                        </div>
+                        <div class="role-desc">
+                            <h4><?php _e( 'Customer View', 'schedspot' ); ?></h4>
+                            <p><?php _e( 'Experience the system as a client - book services, view history, and communicate with workers.', 'schedspot' ); ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        .schedspot-role-switcher {
+            max-width: 800px;
+        }
+        .current-role-info {
+            background: #f1f1f1;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .role-descriptions {
+            margin-top: 30px;
+        }
+        .role-description-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .role-desc {
+            background: #fff;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .role-desc h4 {
+            margin-top: 0;
+            color: #0073aa;
+        }
+        </style>
+        <?php
+    }
+
+    /**
+     * Process role switch request.
+     *
+     * @since 1.0.0
+     */
+    private function process_role_switch() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'You do not have permission to switch roles.', 'schedspot' ) );
+        }
+
+        $target_role = sanitize_text_field( $_POST['target_role'] );
+        $test_user_id = isset( $_POST['test_user_id'] ) ? absint( $_POST['test_user_id'] ) : 0;
+
+        // Validate target role
+        $allowed_roles = array( 'administrator', 'schedspot_worker', 'schedspot_customer' );
+        if ( ! in_array( $target_role, $allowed_roles ) ) {
+            add_settings_error( 'schedspot_role_switcher', 'invalid_role', __( 'Invalid role selected.', 'schedspot' ) );
+            return;
+        }
+
+        // Store the role switch in user meta
+        update_user_meta( get_current_user_id(), 'schedspot_admin_role_mode', $target_role );
+
+        if ( $test_user_id > 0 ) {
+            update_user_meta( get_current_user_id(), 'schedspot_admin_impersonate_user', $test_user_id );
+        } else {
+            delete_user_meta( get_current_user_id(), 'schedspot_admin_impersonate_user' );
+        }
+
+        add_settings_error( 'schedspot_role_switcher', 'role_switched',
+            sprintf( __( 'Successfully switched to %s mode.', 'schedspot' ), $this->get_role_display_name( $target_role ) ),
+            'updated'
+        );
+    }
+
+    /**
+     * Get current admin role mode.
+     *
+     * @since 1.0.0
+     * @return string Current role mode.
+     */
+    private function get_current_admin_role_mode() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return '';
+        }
+
+        // Check for quick switch request
+        if ( isset( $_GET['quick_switch'] ) && wp_verify_nonce( $_GET['_wpnonce'], 'schedspot_quick_switch' ) ) {
+            $target_role = sanitize_text_field( $_GET['quick_switch'] );
+            $allowed_roles = array( 'administrator', 'schedspot_worker', 'schedspot_customer' );
+
+            if ( in_array( $target_role, $allowed_roles ) ) {
+                update_user_meta( get_current_user_id(), 'schedspot_admin_role_mode', $target_role );
+
+                // Redirect to remove the query parameters
+                wp_redirect( remove_query_arg( array( 'quick_switch', '_wpnonce' ) ) );
+                exit;
+            }
+        }
+
+        // Check for reset request
+        if ( isset( $_GET['reset_role'] ) && wp_verify_nonce( $_GET['_wpnonce'], 'schedspot_reset_role' ) ) {
+            delete_user_meta( get_current_user_id(), 'schedspot_admin_role_mode' );
+            delete_user_meta( get_current_user_id(), 'schedspot_admin_impersonate_user' );
+            return 'administrator';
+        }
+
+        return get_user_meta( get_current_user_id(), 'schedspot_admin_role_mode', true ) ?: 'administrator';
+    }
+
+    /**
+     * Get role display name.
+     *
+     * @since 1.0.0
+     * @param string $role Role name.
+     * @return string Display name.
+     */
+    private function get_role_display_name( $role ) {
+        $names = array(
+            'administrator'       => __( 'Administrator', 'schedspot' ),
+            'schedspot_worker'    => __( 'Worker', 'schedspot' ),
+            'schedspot_customer'  => __( 'Customer', 'schedspot' ),
+        );
+
+        return isset( $names[ $role ] ) ? $names[ $role ] : $role;
+    }
+
+    /**
+     * Get role description.
+     *
+     * @since 1.0.0
+     * @param string $role Role name.
+     * @return string Description.
+     */
+    private function get_role_description( $role ) {
+        $descriptions = array(
+            'administrator'       => __( 'Full administrative access', 'schedspot' ),
+            'schedspot_worker'    => __( 'Service provider experience', 'schedspot' ),
+            'schedspot_customer'  => __( 'Client booking experience', 'schedspot' ),
+        );
+
+        return isset( $descriptions[ $role ] ) ? $descriptions[ $role ] : '';
+    }
+
+    /**
+     * Add role switcher to admin bar.
+     *
+     * @since 1.0.0
+     * @param WP_Admin_Bar $wp_admin_bar Admin bar object.
+     */
+    public function add_admin_bar_role_switcher( $wp_admin_bar ) {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        $current_role = $this->get_current_admin_role_mode();
+
+        $wp_admin_bar->add_node( array(
+            'id'    => 'schedspot-role-switcher',
+            'title' => sprintf( __( 'SchedSpot: %s', 'schedspot' ), $this->get_role_display_name( $current_role ) ),
+            'href'  => admin_url( 'admin.php?page=schedspot-role-switcher' ),
+            'meta'  => array(
+                'title' => __( 'Switch SchedSpot admin role view', 'schedspot' ),
+            ),
+        ) );
+
+        // Add quick switch options
+        $roles = array(
+            'administrator'       => __( 'Administrator', 'schedspot' ),
+            'schedspot_worker'    => __( 'Worker View', 'schedspot' ),
+            'schedspot_customer'  => __( 'Customer View', 'schedspot' ),
+        );
+
+        foreach ( $roles as $role => $name ) {
+            if ( $role === $current_role ) {
+                continue;
+            }
+
+            $wp_admin_bar->add_node( array(
+                'parent' => 'schedspot-role-switcher',
+                'id'     => 'schedspot-switch-' . $role,
+                'title'  => $name,
+                'href'   => wp_nonce_url(
+                    admin_url( 'admin.php?page=schedspot-role-switcher&quick_switch=' . $role ),
+                    'schedspot_quick_switch'
+                ),
+            ) );
+        }
+    }
+
+    /**
+     * Handle AJAX role switch.
+     *
+     * @since 1.0.0
+     */
+    public function handle_role_switch() {
+        if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( $_POST['nonce'], 'schedspot_role_switch' ) ) {
+            wp_die( __( 'Permission denied.', 'schedspot' ) );
+        }
+
+        $target_role = sanitize_text_field( $_POST['role'] );
+        update_user_meta( get_current_user_id(), 'schedspot_admin_role_mode', $target_role );
+
+        wp_send_json_success( array(
+            'message' => sprintf( __( 'Switched to %s mode', 'schedspot' ), $this->get_role_display_name( $target_role ) ),
+            'role' => $target_role,
+        ) );
     }
 
     /**

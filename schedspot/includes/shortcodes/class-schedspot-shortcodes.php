@@ -44,6 +44,37 @@ class SchedSpot_Shortcodes {
         foreach ( $shortcodes as $shortcode => $function ) {
             add_shortcode( $shortcode, array( $this, $function ) );
         }
+
+        // Hook to mark pages with shortcodes for navigation
+        add_action( 'save_post', array( $this, 'mark_pages_with_shortcodes' ) );
+    }
+
+    /**
+     * Mark pages that contain SchedSpot shortcodes for easier navigation.
+     *
+     * @since 1.0.0
+     * @param int $post_id Post ID.
+     */
+    public function mark_pages_with_shortcodes( $post_id ) {
+        if ( get_post_type( $post_id ) !== 'page' ) {
+            return;
+        }
+
+        $content = get_post_field( 'post_content', $post_id );
+
+        // Check for booking form shortcode
+        if ( has_shortcode( $content, 'schedspot_booking_form' ) ) {
+            update_post_meta( $post_id, '_schedspot_has_booking_form', '1' );
+        } else {
+            delete_post_meta( $post_id, '_schedspot_has_booking_form' );
+        }
+
+        // Check for dashboard shortcode
+        if ( has_shortcode( $content, 'schedspot_dashboard' ) ) {
+            update_post_meta( $post_id, '_schedspot_has_dashboard', '1' );
+        } else {
+            delete_post_meta( $post_id, '_schedspot_has_dashboard' );
+        }
     }
 
     /**
@@ -72,6 +103,28 @@ class SchedSpot_Shortcodes {
 
         ?>
         <div class="<?php echo esc_attr( $atts['class'] ); ?>">
+            <!-- Navigation Bar -->
+            <?php if ( is_user_logged_in() ) : ?>
+            <div class="schedspot-navigation">
+                <div class="schedspot-nav-links">
+                    <a href="<?php echo esc_url( $this->get_booking_form_url() ); ?>" class="schedspot-nav-link active">
+                        <span class="dashicons dashicons-calendar-alt"></span>
+                        <?php _e( 'Book Service', 'schedspot' ); ?>
+                    </a>
+                    <a href="<?php echo esc_url( $this->get_dashboard_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-dashboard"></span>
+                        <?php _e( 'Dashboard', 'schedspot' ); ?>
+                    </a>
+                    <?php if ( current_user_can( 'manage_options' ) ) : ?>
+                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-role-switcher' ); ?>" class="schedspot-nav-link admin-switcher">
+                        <span class="dashicons dashicons-admin-users"></span>
+                        <?php printf( __( 'Admin: %s', 'schedspot' ), $this->get_role_display_name( SchedSpot()->get_effective_user_role() ) ); ?>
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <form method="post" id="schedspot-booking-form">
                 <?php wp_nonce_field( 'schedspot_booking_form', 'schedspot_booking_nonce' ); ?>
                 
@@ -304,20 +357,62 @@ class SchedSpot_Shortcodes {
         ob_start();
 
         $current_user = wp_get_current_user();
-        $user_role = $this->get_user_schedspot_role( $current_user->ID );
+        $user_role = SchedSpot()->get_effective_user_role( $current_user->ID );
+
+        // Get display user for impersonation
+        $display_user = $current_user;
+        if ( current_user_can( 'manage_options' ) ) {
+            $impersonate_user_id = get_user_meta( get_current_user_id(), 'schedspot_admin_impersonate_user', true );
+            if ( $impersonate_user_id && $impersonate_user_id != get_current_user_id() ) {
+                $display_user = get_userdata( $impersonate_user_id );
+            }
+        }
 
         ?>
         <div class="<?php echo esc_attr( $atts['class'] ); ?>">
+            <!-- Navigation Bar -->
+            <div class="schedspot-navigation">
+                <div class="schedspot-nav-links">
+                    <a href="<?php echo esc_url( $this->get_booking_form_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-calendar-alt"></span>
+                        <?php _e( 'Book Service', 'schedspot' ); ?>
+                    </a>
+                    <a href="<?php echo esc_url( $this->get_dashboard_url() ); ?>" class="schedspot-nav-link active">
+                        <span class="dashicons dashicons-dashboard"></span>
+                        <?php _e( 'Dashboard', 'schedspot' ); ?>
+                    </a>
+                    <?php if ( $user_role === 'schedspot_worker' ) : ?>
+                    <a href="#" class="schedspot-nav-link" onclick="openWorkerSettings()">
+                        <span class="dashicons dashicons-admin-settings"></span>
+                        <?php _e( 'Settings', 'schedspot' ); ?>
+                    </a>
+                    <?php endif; ?>
+                    <?php if ( current_user_can( 'manage_options' ) ) : ?>
+                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-role-switcher' ); ?>" class="schedspot-nav-link admin-switcher">
+                        <span class="dashicons dashicons-admin-users"></span>
+                        <?php printf( __( 'Admin: %s', 'schedspot' ), $this->get_role_display_name( $user_role ) ); ?>
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <div class="schedspot-dashboard-header">
-                <h2><?php printf( __( 'Welcome, %s', 'schedspot' ), esc_html( $current_user->display_name ) ); ?></h2>
-                <p class="user-role"><?php echo esc_html( $this->get_role_display_name( $user_role ) ); ?></p>
+                <h2><?php printf( __( 'Welcome, %s', 'schedspot' ), esc_html( $display_user->display_name ) ); ?></h2>
+                <p class="user-role">
+                    <?php echo esc_html( $this->get_role_display_name( $user_role ) ); ?>
+                    <?php if ( current_user_can( 'manage_options' ) && $display_user->ID !== get_current_user_id() ) : ?>
+                        <span class="admin-mode-indicator"><?php _e( '(Admin Mode)', 'schedspot' ); ?></span>
+                    <?php endif; ?>
+                </p>
             </div>
 
             <div class="schedspot-dashboard-content">
                 <?php if ( 'schedspot_customer' === $user_role ) : ?>
-                    <?php $this->render_customer_dashboard( $current_user->ID ); ?>
+                    <?php $this->render_customer_dashboard( $display_user->ID ); ?>
                 <?php elseif ( 'schedspot_worker' === $user_role ) : ?>
-                    <?php $this->render_worker_dashboard( $current_user->ID ); ?>
+                    <?php $this->render_worker_dashboard( $display_user->ID ); ?>
+                <?php elseif ( 'administrator' === $user_role ) : ?>
+                    <?php $this->render_admin_dashboard( $display_user->ID ); ?>
                 <?php else : ?>
                     <p><?php _e( 'Your account is not set up for SchedSpot services. Please contact the administrator.', 'schedspot' ); ?></p>
                 <?php endif; ?>
@@ -535,20 +630,87 @@ class SchedSpot_Shortcodes {
      * @return string User's SchedSpot role.
      */
     private function get_user_schedspot_role( $user_id ) {
-        $user = get_userdata( $user_id );
-        if ( ! $user ) {
-            return '';
+        return SchedSpot()->get_effective_user_role( $user_id );
+    }
+
+    /**
+     * Get booking form URL.
+     *
+     * @since 1.0.0
+     * @return string Booking form URL.
+     */
+    private function get_booking_form_url() {
+        // Try to find a page with the booking form shortcode
+        $pages = get_posts( array(
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            'meta_query' => array(
+                array(
+                    'key' => '_schedspot_has_booking_form',
+                    'value' => '1',
+                    'compare' => '='
+                )
+            ),
+            'numberposts' => 1
+        ) );
+
+        if ( ! empty( $pages ) ) {
+            return get_permalink( $pages[0]->ID );
         }
 
-        if ( in_array( 'schedspot_customer', $user->roles ) ) {
-            return 'schedspot_customer';
-        } elseif ( in_array( 'schedspot_worker', $user->roles ) ) {
-            return 'schedspot_worker';
-        } elseif ( in_array( 'administrator', $user->roles ) ) {
-            return 'administrator';
+        // Fallback: search for shortcode in content
+        $pages = get_posts( array(
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            's' => '[schedspot_booking_form]',
+            'numberposts' => 1
+        ) );
+
+        if ( ! empty( $pages ) ) {
+            return get_permalink( $pages[0]->ID );
         }
 
-        return '';
+        return home_url( '?schedspot_action=booking_form' );
+    }
+
+    /**
+     * Get dashboard URL.
+     *
+     * @since 1.0.0
+     * @return string Dashboard URL.
+     */
+    private function get_dashboard_url() {
+        // Try to find a page with the dashboard shortcode
+        $pages = get_posts( array(
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            'meta_query' => array(
+                array(
+                    'key' => '_schedspot_has_dashboard',
+                    'value' => '1',
+                    'compare' => '='
+                )
+            ),
+            'numberposts' => 1
+        ) );
+
+        if ( ! empty( $pages ) ) {
+            return get_permalink( $pages[0]->ID );
+        }
+
+        // Fallback: search for shortcode in content
+        $pages = get_posts( array(
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            's' => '[schedspot_dashboard]',
+            'numberposts' => 1
+        ) );
+
+        if ( ! empty( $pages ) ) {
+            return get_permalink( $pages[0]->ID );
+        }
+
+        return home_url( '?schedspot_action=dashboard' );
     }
 
     /**
@@ -707,9 +869,64 @@ class SchedSpot_Shortcodes {
                     <button class="schedspot-btn schedspot-btn-primary" onclick="toggleAvailability()"><?php _e( 'Toggle Availability', 'schedspot' ); ?></button>
                     <button class="schedspot-btn" onclick="openAvailabilityEditor()"><?php _e( 'Edit Schedule', 'schedspot' ); ?></button>
                     <button class="schedspot-btn" onclick="viewEarnings()"><?php _e( 'View Earnings', 'schedspot' ); ?></button>
+                    <button class="schedspot-btn" onclick="manageProfile()"><?php _e( 'Manage Profile', 'schedspot' ); ?></button>
+                    <button class="schedspot-btn" onclick="manageServices()"><?php _e( 'Manage Services', 'schedspot' ); ?></button>
+                    <button class="schedspot-btn" onclick="managePayments()"><?php _e( 'Payment Settings', 'schedspot' ); ?></button>
                     <?php if ( get_option( 'schedspot_enable_geofencing', false ) ) : ?>
-                    <button class="schedspot-btn" onclick="manageServiceAreas()"><?php _e( 'Manage Service Areas', 'schedspot' ); ?></button>
+                    <button class="schedspot-btn" onclick="manageServiceAreas()"><?php _e( 'Service Areas', 'schedspot' ); ?></button>
                     <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Worker Settings Modal Container -->
+            <div id="schedspot-worker-settings-modal" class="schedspot-modal" style="display: none;">
+                <div class="schedspot-modal-content schedspot-settings-modal">
+                    <div class="schedspot-modal-header">
+                        <h3 id="settings-modal-title"><?php _e( 'Worker Settings', 'schedspot' ); ?></h3>
+                        <span class="schedspot-modal-close" onclick="closeWorkerSettings()">&times;</span>
+                    </div>
+                    <div class="schedspot-modal-body">
+                        <div class="schedspot-settings-tabs">
+                            <div class="settings-tab-nav">
+                                <button class="settings-tab-btn active" onclick="showSettingsTab('profile')"><?php _e( 'Profile', 'schedspot' ); ?></button>
+                                <button class="settings-tab-btn" onclick="showSettingsTab('schedule')"><?php _e( 'Schedule', 'schedspot' ); ?></button>
+                                <button class="settings-tab-btn" onclick="showSettingsTab('services')"><?php _e( 'Services', 'schedspot' ); ?></button>
+                                <button class="settings-tab-btn" onclick="showSettingsTab('payments')"><?php _e( 'Payments', 'schedspot' ); ?></button>
+                                <?php if ( get_option( 'schedspot_enable_geofencing', false ) ) : ?>
+                                <button class="settings-tab-btn" onclick="showSettingsTab('geolocation')"><?php _e( 'Service Areas', 'schedspot' ); ?></button>
+                                <?php endif; ?>
+                            </div>
+                            <div class="settings-tab-content">
+                                <div id="settings-tab-profile" class="settings-tab-pane active">
+                                    <div id="profile-settings-content">
+                                        <p><?php _e( 'Loading profile settings...', 'schedspot' ); ?></p>
+                                    </div>
+                                </div>
+                                <div id="settings-tab-schedule" class="settings-tab-pane">
+                                    <div id="schedule-settings-content">
+                                        <p><?php _e( 'Loading schedule settings...', 'schedspot' ); ?></p>
+                                    </div>
+                                </div>
+                                <div id="settings-tab-services" class="settings-tab-pane">
+                                    <div id="services-settings-content">
+                                        <p><?php _e( 'Loading services settings...', 'schedspot' ); ?></p>
+                                    </div>
+                                </div>
+                                <div id="settings-tab-payments" class="settings-tab-pane">
+                                    <div id="payments-settings-content">
+                                        <p><?php _e( 'Loading payment settings...', 'schedspot' ); ?></p>
+                                    </div>
+                                </div>
+                                <?php if ( get_option( 'schedspot_enable_geofencing', false ) ) : ?>
+                                <div id="settings-tab-geolocation" class="settings-tab-pane">
+                                    <div id="geolocation-settings-content">
+                                        <p><?php _e( 'Loading geolocation settings...', 'schedspot' ); ?></p>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -839,23 +1056,257 @@ class SchedSpot_Shortcodes {
         }
 
         function openAvailabilityEditor() {
-            // This would open a modal or redirect to availability management
-            alert('<?php _e( 'Availability editor coming soon!', 'schedspot' ); ?>');
+            // Redirect to availability management page
+            window.location.href = '<?php echo admin_url( 'admin.php?page=schedspot-workers&action=availability&worker_id=' ); ?>' + getCurrentUserId();
         }
 
         function viewEarnings() {
-            // This would show detailed earnings breakdown
-            alert('<?php _e( 'Detailed earnings view coming soon!', 'schedspot' ); ?>');
+            // Show detailed earnings breakdown
+            showEarningsModal();
         }
 
         function rescheduleBooking(bookingId) {
-            // This would open a reschedule interface
-            alert('<?php _e( 'Reschedule feature coming soon!', 'schedspot' ); ?>');
+            // Open reschedule interface
+            showRescheduleModal(bookingId);
         }
 
         function loadAllBookings() {
-            // This would load all bookings with pagination
-            alert('<?php _e( 'Full booking history coming soon!', 'schedspot' ); ?>');
+            // Load all bookings with pagination
+            loadBookingsPage(1);
+        }
+
+        function showEarningsModal() {
+            // Create and show earnings modal
+            var modal = document.createElement('div');
+            modal.className = 'schedspot-modal';
+            modal.innerHTML = `
+                <div class="schedspot-modal-content">
+                    <div class="schedspot-modal-header">
+                        <h3><?php _e( 'Earnings Breakdown', 'schedspot' ); ?></h3>
+                        <span class="schedspot-modal-close" onclick="closeModal(this)">&times;</span>
+                    </div>
+                    <div class="schedspot-modal-body">
+                        <div id="earnings-content">
+                            <p><?php _e( 'Loading earnings data...', 'schedspot' ); ?></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Load earnings data via AJAX
+            loadEarningsData();
+        }
+
+        function showRescheduleModal(bookingId) {
+            // Create and show reschedule modal
+            var modal = document.createElement('div');
+            modal.className = 'schedspot-modal';
+            modal.innerHTML = `
+                <div class="schedspot-modal-content">
+                    <div class="schedspot-modal-header">
+                        <h3><?php _e( 'Reschedule Booking', 'schedspot' ); ?></h3>
+                        <span class="schedspot-modal-close" onclick="closeModal(this)">&times;</span>
+                    </div>
+                    <div class="schedspot-modal-body">
+                        <div id="reschedule-content">
+                            <p><?php _e( 'Loading booking details...', 'schedspot' ); ?></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Load booking data and reschedule form
+            loadRescheduleForm(bookingId);
+        }
+
+        function loadBookingsPage(page) {
+            // Load bookings with pagination
+            var container = document.getElementById('worker-bookings');
+            if (!container) return;
+
+            container.innerHTML = '<p><?php _e( 'Loading bookings...', 'schedspot' ); ?></p>';
+
+            // AJAX call to load bookings
+            fetch('<?php echo rest_url( 'schedspot/v1/bookings' ); ?>?per_page=10&offset=' + ((page - 1) * 10), {
+                method: 'GET',
+                headers: {
+                    'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayBookings(data, page);
+            })
+            .catch(error => {
+                container.innerHTML = '<p><?php _e( 'Error loading bookings.', 'schedspot' ); ?></p>';
+            });
+        }
+
+        function loadEarningsData() {
+            fetch('<?php echo rest_url( 'schedspot/v1/workers/' ); ?>' + getCurrentUserId() + '/statistics', {
+                method: 'GET',
+                headers: {
+                    'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayEarningsData(data);
+            })
+            .catch(error => {
+                document.getElementById('earnings-content').innerHTML = '<p><?php _e( 'Error loading earnings data.', 'schedspot' ); ?></p>';
+            });
+        }
+
+        function loadRescheduleForm(bookingId) {
+            fetch('<?php echo rest_url( 'schedspot/v1/bookings/' ); ?>' + bookingId, {
+                method: 'GET',
+                headers: {
+                    'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayRescheduleForm(data);
+            })
+            .catch(error => {
+                document.getElementById('reschedule-content').innerHTML = '<p><?php _e( 'Error loading booking details.', 'schedspot' ); ?></p>';
+            });
+        }
+
+        function displayBookings(bookings, page) {
+            var container = document.getElementById('worker-bookings');
+            var html = '<div class="schedspot-bookings-list">';
+
+            if (bookings.length === 0) {
+                html += '<p><?php _e( 'No bookings found.', 'schedspot' ); ?></p>';
+            } else {
+                bookings.forEach(function(booking) {
+                    html += `
+                        <div class="schedspot-booking-item">
+                            <div class="booking-info">
+                                <h4>${booking.service_name || '<?php _e( 'General Service', 'schedspot' ); ?>'}</h4>
+                                <p><strong><?php _e( 'Date:', 'schedspot' ); ?></strong> ${booking.booking_date}</p>
+                                <p><strong><?php _e( 'Time:', 'schedspot' ); ?></strong> ${booking.start_time} - ${booking.end_time}</p>
+                                <p><strong><?php _e( 'Status:', 'schedspot' ); ?></strong> ${booking.status}</p>
+                                <p><strong><?php _e( 'Cost:', 'schedspot' ); ?></strong> $${booking.total_cost}</p>
+                            </div>
+                            <div class="booking-actions">
+                                <button onclick="rescheduleBooking(${booking.id})" class="button"><?php _e( 'Reschedule', 'schedspot' ); ?></button>
+                                <button onclick="messageClient(${booking.user_id}, ${booking.id})" class="button"><?php _e( 'Message Client', 'schedspot' ); ?></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function displayEarningsData(data) {
+            var content = document.getElementById('earnings-content');
+            var html = `
+                <div class="schedspot-earnings-summary">
+                    <div class="earnings-stat">
+                        <h4><?php _e( 'Total Earnings', 'schedspot' ); ?></h4>
+                        <p class="amount">$${data.total_earnings || '0.00'}</p>
+                    </div>
+                    <div class="earnings-stat">
+                        <h4><?php _e( 'This Month', 'schedspot' ); ?></h4>
+                        <p class="amount">$${data.monthly_earnings || '0.00'}</p>
+                    </div>
+                    <div class="earnings-stat">
+                        <h4><?php _e( 'Completed Jobs', 'schedspot' ); ?></h4>
+                        <p class="count">${data.completed_bookings || '0'}</p>
+                    </div>
+                    <div class="earnings-stat">
+                        <h4><?php _e( 'Average Rating', 'schedspot' ); ?></h4>
+                        <p class="rating">${data.average_rating || 'N/A'}</p>
+                    </div>
+                </div>
+            `;
+            content.innerHTML = html;
+        }
+
+        function displayRescheduleForm(booking) {
+            var content = document.getElementById('reschedule-content');
+            var html = `
+                <form id="reschedule-form">
+                    <input type="hidden" name="booking_id" value="${booking.id}">
+                    <div class="form-group">
+                        <label><?php _e( 'Current Date:', 'schedspot' ); ?></label>
+                        <p>${booking.booking_date} ${booking.start_time} - ${booking.end_time}</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="new_date"><?php _e( 'New Date:', 'schedspot' ); ?></label>
+                        <input type="date" id="new_date" name="new_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new_start_time"><?php _e( 'New Start Time:', 'schedspot' ); ?></label>
+                        <input type="time" id="new_start_time" name="new_start_time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reschedule_reason"><?php _e( 'Reason for Reschedule:', 'schedspot' ); ?></label>
+                        <textarea id="reschedule_reason" name="reschedule_reason" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="button button-primary"><?php _e( 'Reschedule Booking', 'schedspot' ); ?></button>
+                        <button type="button" onclick="closeModal(this)" class="button"><?php _e( 'Cancel', 'schedspot' ); ?></button>
+                    </div>
+                </form>
+            `;
+            content.innerHTML = html;
+
+            // Add form submit handler
+            document.getElementById('reschedule-form').addEventListener('submit', handleRescheduleSubmit);
+        }
+
+        function handleRescheduleSubmit(e) {
+            e.preventDefault();
+            var formData = new FormData(e.target);
+            var bookingId = formData.get('booking_id');
+
+            var updateData = {
+                booking_date: formData.get('new_date'),
+                start_time: formData.get('new_start_time'),
+                notes: formData.get('reschedule_reason')
+            };
+
+            fetch('<?php echo rest_url( 'schedspot/v1/bookings/' ); ?>' + bookingId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'
+                },
+                body: JSON.stringify(updateData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    alert('<?php _e( 'Booking rescheduled successfully!', 'schedspot' ); ?>');
+                    closeModal(document.querySelector('.schedspot-modal-close'));
+                    location.reload(); // Refresh to show updated booking
+                } else {
+                    alert('<?php _e( 'Error rescheduling booking. Please try again.', 'schedspot' ); ?>');
+                }
+            })
+            .catch(error => {
+                alert('<?php _e( 'Error rescheduling booking. Please try again.', 'schedspot' ); ?>');
+            });
+        }
+
+        function closeModal(element) {
+            var modal = element.closest('.schedspot-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function getCurrentUserId() {
+            return <?php echo get_current_user_id(); ?>;
         }
 
         function messageClient(clientId, bookingId) {
@@ -863,7 +1314,257 @@ class SchedSpot_Shortcodes {
             var messagesUrl = '<?php echo home_url( '/messages/' ); ?>?user_id=' + clientId + '&booking_id=' + bookingId;
             window.location.href = messagesUrl;
         }
+
+        // Enhanced Worker Settings Functions
+        function openWorkerSettings() {
+            document.getElementById('schedspot-worker-settings-modal').style.display = 'block';
+            showSettingsTab('profile');
+        }
+
+        function closeWorkerSettings() {
+            document.getElementById('schedspot-worker-settings-modal').style.display = 'none';
+        }
+
+        function showSettingsTab(tabName) {
+            // Hide all tab panes
+            var panes = document.querySelectorAll('.settings-tab-pane');
+            panes.forEach(function(pane) {
+                pane.classList.remove('active');
+            });
+
+            // Remove active class from all tab buttons
+            var buttons = document.querySelectorAll('.settings-tab-btn');
+            buttons.forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab pane
+            document.getElementById('settings-tab-' + tabName).classList.add('active');
+
+            // Add active class to selected button
+            event.target.classList.add('active');
+
+            // Load content for the selected tab
+            loadSettingsTabContent(tabName);
+        }
+
+        function loadSettingsTabContent(tabName) {
+            var contentDiv = document.getElementById(tabName + '-settings-content');
+
+            switch(tabName) {
+                case 'profile':
+                    loadProfileSettings(contentDiv);
+                    break;
+                case 'schedule':
+                    loadScheduleSettings(contentDiv);
+                    break;
+                case 'services':
+                    loadServicesSettings(contentDiv);
+                    break;
+                case 'payments':
+                    loadPaymentSettings(contentDiv);
+                    break;
+                case 'geolocation':
+                    loadGeolocationSettings(contentDiv);
+                    break;
+            }
+        }
+
+        function loadProfileSettings(container) {
+            fetch('<?php echo rest_url( 'schedspot/v1/workers/' ); ?>' + getCurrentUserId() + '/profile', {
+                method: 'GET',
+                headers: {
+                    'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                container.innerHTML = `
+                    <form id="profile-settings-form">
+                        <div class="form-group">
+                            <label for="worker_bio"><?php _e( 'Bio', 'schedspot' ); ?></label>
+                            <textarea id="worker_bio" name="bio" rows="4" placeholder="<?php _e( 'Tell clients about yourself...', 'schedspot' ); ?>">${data.bio || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="worker_skills"><?php _e( 'Skills', 'schedspot' ); ?></label>
+                            <input type="text" id="worker_skills" name="skills" value="${data.skills || ''}" placeholder="<?php _e( 'e.g., Plumbing, Electrical, Carpentry', 'schedspot' ); ?>">
+                        </div>
+                        <div class="form-group">
+                            <label for="worker_hourly_rate"><?php _e( 'Hourly Rate ($)', 'schedspot' ); ?></label>
+                            <input type="number" id="worker_hourly_rate" name="hourly_rate" value="${data.hourly_rate || ''}" step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="worker_phone"><?php _e( 'Phone Number', 'schedspot' ); ?></label>
+                            <input type="tel" id="worker_phone" name="phone" value="${data.phone || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="worker_certifications"><?php _e( 'Certifications', 'schedspot' ); ?></label>
+                            <textarea id="worker_certifications" name="certifications" rows="3" placeholder="<?php _e( 'List your certifications...', 'schedspot' ); ?>">${data.certifications || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" name="is_available" ${data.is_available ? 'checked' : ''}>
+                                <?php _e( 'Currently Available for Bookings', 'schedspot' ); ?>
+                            </label>
+                        </div>
+                        <button type="submit" class="schedspot-btn schedspot-btn-primary"><?php _e( 'Save Profile', 'schedspot' ); ?></button>
+                    </form>
+                `;
+
+                document.getElementById('profile-settings-form').addEventListener('submit', saveProfileSettings);
+            })
+            .catch(error => {
+                container.innerHTML = '<p><?php _e( 'Error loading profile settings.', 'schedspot' ); ?></p>';
+            });
+        }
+
+        // Quick action functions
+        function manageProfile() {
+            openWorkerSettings();
+            showSettingsTab('profile');
+        }
+
+        function manageServices() {
+            openWorkerSettings();
+            showSettingsTab('services');
+        }
+
+        function managePayments() {
+            openWorkerSettings();
+            showSettingsTab('payments');
+        }
+
+        function manageServiceAreas() {
+            openWorkerSettings();
+            showSettingsTab('geolocation');
+        }
+
+        // Save functions
+        function saveProfileSettings(e) {
+            e.preventDefault();
+            var formData = new FormData(e.target);
+            var profileData = {};
+
+            for (var pair of formData.entries()) {
+                if (pair[0] === 'is_available') {
+                    profileData[pair[0]] = true;
+                } else {
+                    profileData[pair[0]] = pair[1];
+                }
+            }
+
+            if (!formData.has('is_available')) {
+                profileData.is_available = false;
+            }
+
+            fetch('<?php echo rest_url( 'schedspot/v1/workers/' ); ?>' + getCurrentUserId() + '/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'
+                },
+                body: JSON.stringify(profileData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    alert('<?php _e( 'Profile updated successfully!', 'schedspot' ); ?>');
+                    location.reload();
+                } else {
+                    alert('<?php _e( 'Error updating profile.', 'schedspot' ); ?>');
+                }
+            })
+            .catch(error => {
+                alert('<?php _e( 'Error updating profile.', 'schedspot' ); ?>');
+            });
+        }
         </script>
+        <?php
+    }
+
+    /**
+     * Render admin dashboard.
+     *
+     * @since 1.0.0
+     * @param int $user_id User ID.
+     */
+    private function render_admin_dashboard( $user_id ) {
+        ?>
+        <div class="schedspot-admin-dashboard">
+            <div class="admin-dashboard-notice">
+                <h3><?php _e( 'Administrator Dashboard', 'schedspot' ); ?></h3>
+                <p><?php _e( 'You are viewing the system as an administrator. Use the role switcher to test different user experiences.', 'schedspot' ); ?></p>
+                <div class="admin-quick-links">
+                    <a href="<?php echo admin_url( 'admin.php?page=schedspot' ); ?>" class="button button-primary"><?php _e( 'Admin Dashboard', 'schedspot' ); ?></a>
+                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-role-switcher' ); ?>" class="button"><?php _e( 'Role Switcher', 'schedspot' ); ?></a>
+                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-settings' ); ?>" class="button"><?php _e( 'Settings', 'schedspot' ); ?></a>
+                </div>
+            </div>
+
+            <!-- Quick Stats for Admin -->
+            <div class="schedspot-dashboard-stats">
+                <h3><?php _e( 'System Overview', 'schedspot' ); ?></h3>
+                <div class="schedspot-stats-grid">
+                    <?php
+                    global $wpdb;
+                    $total_bookings = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings" );
+                    $pending_bookings = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings WHERE status = 'pending'" );
+                    $total_workers = count( get_users( array( 'role' => 'schedspot_worker' ) ) );
+                    $total_customers = count( get_users( array( 'role' => 'schedspot_customer' ) ) );
+                    ?>
+                    <div class="stat-item">
+                        <div class="stat-number"><?php echo esc_html( $total_bookings ); ?></div>
+                        <div class="stat-label"><?php _e( 'Total Bookings', 'schedspot' ); ?></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number"><?php echo esc_html( $pending_bookings ); ?></div>
+                        <div class="stat-label"><?php _e( 'Pending Bookings', 'schedspot' ); ?></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number"><?php echo esc_html( $total_workers ); ?></div>
+                        <div class="stat-label"><?php _e( 'Workers', 'schedspot' ); ?></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number"><?php echo esc_html( $total_customers ); ?></div>
+                        <div class="stat-label"><?php _e( 'Customers', 'schedspot' ); ?></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="schedspot-recent-activity">
+                <h4><?php _e( 'Recent Bookings', 'schedspot' ); ?></h4>
+                <?php
+                $recent_bookings = SchedSpot_Booking::get_bookings( array( 'limit' => 5 ) );
+                if ( ! empty( $recent_bookings ) ) :
+                ?>
+                <table class="schedspot-table">
+                    <thead>
+                        <tr>
+                            <th><?php _e( 'Service', 'schedspot' ); ?></th>
+                            <th><?php _e( 'Customer', 'schedspot' ); ?></th>
+                            <th><?php _e( 'Worker', 'schedspot' ); ?></th>
+                            <th><?php _e( 'Date', 'schedspot' ); ?></th>
+                            <th><?php _e( 'Status', 'schedspot' ); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $recent_bookings as $booking ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( $booking->service_name ?: __( 'General Service', 'schedspot' ) ); ?></td>
+                            <td><?php echo esc_html( get_userdata( $booking->user_id )->display_name ); ?></td>
+                            <td><?php echo esc_html( get_userdata( $booking->worker_id )->display_name ); ?></td>
+                            <td><?php echo esc_html( $booking->booking_date ); ?></td>
+                            <td><span class="status-<?php echo esc_attr( $booking->status ); ?>"><?php echo esc_html( ucfirst( $booking->status ) ); ?></span></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php else : ?>
+                <p><?php _e( 'No recent bookings found.', 'schedspot' ); ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
         <?php
     }
 
@@ -899,7 +1600,10 @@ class SchedSpot_Shortcodes {
      * @since 0.1.0
      */
     private function enqueue_booking_assets() {
-        // For now, we'll add inline styles. In future versions, we'll use separate CSS files
+        // Enqueue enhanced CSS file
+        wp_enqueue_style( 'schedspot-frontend-enhanced', SCHEDSPOT_PLUGIN_URL . 'assets/css/frontend-enhanced.css', array(), SCHEDSPOT_VERSION );
+
+        // Add inline styles for compatibility
         add_action( 'wp_footer', array( $this, 'output_booking_styles' ) );
 
         // Enqueue geolocation scripts if enabled

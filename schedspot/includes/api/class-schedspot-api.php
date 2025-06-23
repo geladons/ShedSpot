@@ -203,6 +203,86 @@ class SchedSpot_API {
                 'args'                => $this->get_worker_services_args(),
             ),
         ) );
+
+        // Payment endpoints
+        register_rest_route( $this->namespace, '/payments/create-order', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'create_payment_order' ),
+            'permission_callback' => array( $this, 'check_create_booking_permissions' ),
+            'args'                => $this->get_create_order_args(),
+        ) );
+
+        register_rest_route( $this->namespace, '/payments/process', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'process_payment' ),
+            'permission_callback' => array( $this, 'check_create_booking_permissions' ),
+            'args'                => $this->get_process_payment_args(),
+        ) );
+
+        register_rest_route( $this->namespace, '/payments/orders/(?P<id>\d+)', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'get_payment_order' ),
+            'permission_callback' => array( $this, 'check_booking_permissions' ),
+        ) );
+
+        register_rest_route( $this->namespace, '/payments/orders/(?P<id>\d+)/status', array(
+            'methods'             => WP_REST_Server::EDITABLE,
+            'callback'            => array( $this, 'update_payment_status' ),
+            'permission_callback' => array( $this, 'check_admin_permissions' ),
+            'args'                => $this->get_payment_status_args(),
+        ) );
+
+        // Messaging endpoints
+        register_rest_route( $this->namespace, '/messages', array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array( $this, 'get_messages' ),
+                'permission_callback' => array( $this, 'check_messaging_permissions' ),
+                'args'                => $this->get_messages_args(),
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'send_message' ),
+                'permission_callback' => array( $this, 'check_messaging_permissions' ),
+                'args'                => $this->get_send_message_args(),
+            ),
+        ) );
+
+        register_rest_route( $this->namespace, '/messages/(?P<id>\d+)', array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array( $this, 'get_message' ),
+                'permission_callback' => array( $this, 'check_message_permissions' ),
+            ),
+            array(
+                'methods'             => WP_REST_Server::EDITABLE,
+                'callback'            => array( $this, 'update_message' ),
+                'permission_callback' => array( $this, 'check_message_permissions' ),
+                'args'                => $this->get_update_message_args(),
+            ),
+        ) );
+
+        register_rest_route( $this->namespace, '/conversations/(?P<user_id>\d+)', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( $this, 'get_conversation' ),
+            'permission_callback' => array( $this, 'check_conversation_permissions' ),
+            'args'                => $this->get_conversation_args(),
+        ) );
+
+        // Worker payment settings endpoint
+        register_rest_route( $this->namespace, '/workers/(?P<id>\d+)/payment-settings', array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array( $this, 'get_worker_payment_settings' ),
+                'permission_callback' => array( $this, 'check_worker_permissions' ),
+            ),
+            array(
+                'methods'             => WP_REST_Server::EDITABLE,
+                'callback'            => array( $this, 'update_worker_payment_settings' ),
+                'permission_callback' => array( $this, 'check_worker_permissions' ),
+                'args'                => $this->get_worker_payment_settings_args(),
+            ),
+        ) );
     }
 
     /**
@@ -635,6 +715,94 @@ class SchedSpot_API {
         return $sanitized;
     }
 
+    // Payment endpoint argument definitions
+    private function get_create_order_args() {
+        return array(
+            'booking_id' => array( 'required' => true, 'sanitize_callback' => 'absint' ),
+            'payment_type' => array( 'default' => 'full', 'sanitize_callback' => 'sanitize_text_field' ),
+        );
+    }
+
+    private function get_process_payment_args() {
+        return array(
+            'order_id' => array( 'required' => true, 'sanitize_callback' => 'absint' ),
+            'payment_method' => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
+            'payment_data' => array( 'required' => false, 'sanitize_callback' => array( $this, 'sanitize_payment_data' ) ),
+        );
+    }
+
+    private function get_payment_status_args() {
+        return array(
+            'status' => array( 'required' => true, 'sanitize_callback' => 'sanitize_text_field' ),
+        );
+    }
+
+    // Messaging endpoint argument definitions
+    private function get_messages_args() {
+        return array(
+            'conversation_with' => array( 'default' => 0, 'sanitize_callback' => 'absint' ),
+            'limit' => array( 'default' => 50, 'sanitize_callback' => 'absint' ),
+            'offset' => array( 'default' => 0, 'sanitize_callback' => 'absint' ),
+            'order' => array( 'default' => 'ASC', 'sanitize_callback' => 'sanitize_text_field' ),
+            'booking_id' => array( 'default' => 0, 'sanitize_callback' => 'absint' ),
+        );
+    }
+
+    private function get_send_message_args() {
+        return array(
+            'receiver_id' => array( 'required' => true, 'sanitize_callback' => 'absint' ),
+            'content' => array( 'required' => true, 'sanitize_callback' => 'sanitize_textarea_field' ),
+            'booking_id' => array( 'default' => 0, 'sanitize_callback' => 'absint' ),
+            'message_type' => array( 'default' => 'text', 'sanitize_callback' => 'sanitize_text_field' ),
+            'attachment_data' => array( 'default' => '', 'sanitize_callback' => array( $this, 'sanitize_attachment_data' ) ),
+        );
+    }
+
+    private function get_update_message_args() {
+        return array(
+            'mark_as_read' => array( 'default' => false, 'sanitize_callback' => 'rest_sanitize_boolean' ),
+        );
+    }
+
+    private function get_conversation_args() {
+        return array(
+            'limit' => array( 'default' => 50, 'sanitize_callback' => 'absint' ),
+            'offset' => array( 'default' => 0, 'sanitize_callback' => 'absint' ),
+            'order' => array( 'default' => 'ASC', 'sanitize_callback' => 'sanitize_text_field' ),
+            'booking_id' => array( 'default' => 0, 'sanitize_callback' => 'absint' ),
+        );
+    }
+
+    public function sanitize_payment_data( $data ) {
+        if ( ! is_array( $data ) ) {
+            return array();
+        }
+
+        // Sanitize payment data based on your payment gateway requirements
+        $sanitized = array();
+        foreach ( $data as $key => $value ) {
+            $sanitized[ sanitize_key( $key ) ] = sanitize_text_field( $value );
+        }
+
+        return $sanitized;
+    }
+
+    public function sanitize_attachment_data( $data ) {
+        if ( empty( $data ) ) {
+            return '';
+        }
+
+        if ( is_string( $data ) ) {
+            return sanitize_text_field( $data );
+        }
+
+        if ( is_array( $data ) ) {
+            return wp_json_encode( $data );
+        }
+
+        return '';
+    }
+
     public function sanitize_availability_data( $data ) {
         if ( ! is_array( $data ) ) {
             return array();
@@ -653,6 +821,170 @@ class SchedSpot_API {
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Create payment order.
+     *
+     * @since 1.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function create_payment_order( $request ) {
+        $params = $request->get_params();
+        $booking_id = absint( $params['booking_id'] );
+
+        if ( ! $booking_id ) {
+            return new WP_Error( 'missing_booking_id', __( 'Booking ID is required.', 'schedspot' ), array( 'status' => 400 ) );
+        }
+
+        $booking = new SchedSpot_Booking( $booking_id );
+        if ( ! $booking->id ) {
+            return new WP_Error( 'booking_not_found', __( 'Booking not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        // Check if WooCommerce is active
+        if ( ! class_exists( 'WooCommerce' ) ) {
+            return new WP_Error( 'woocommerce_not_active', __( 'WooCommerce is required for payments.', 'schedspot' ), array( 'status' => 400 ) );
+        }
+
+        // Create WooCommerce order
+        $wc_integration = new SchedSpot_WooCommerce();
+        $wc_integration->create_order_for_booking( $booking_id, $booking );
+
+        $order_id = get_post_meta( $booking_id, 'schedspot_wc_order_id', true );
+        if ( ! $order_id ) {
+            return new WP_Error( 'order_creation_failed', __( 'Failed to create payment order.', 'schedspot' ), array( 'status' => 500 ) );
+        }
+
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return new WP_Error( 'order_not_found', __( 'Payment order not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        return rest_ensure_response( array(
+            'order_id'     => $order->get_id(),
+            'order_key'    => $order->get_order_key(),
+            'total'        => $order->get_total(),
+            'currency'     => $order->get_currency(),
+            'status'       => $order->get_status(),
+            'checkout_url' => $order->get_checkout_payment_url(),
+        ) );
+    }
+
+    /**
+     * Process payment.
+     *
+     * @since 1.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function process_payment( $request ) {
+        $params = $request->get_params();
+        $order_id = absint( $params['order_id'] );
+        $payment_method = sanitize_text_field( $params['payment_method'] );
+
+        if ( ! $order_id ) {
+            return new WP_Error( 'missing_order_id', __( 'Order ID is required.', 'schedspot' ), array( 'status' => 400 ) );
+        }
+
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return new WP_Error( 'order_not_found', __( 'Order not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        // Set payment method if provided
+        if ( $payment_method ) {
+            $order->set_payment_method( $payment_method );
+            $order->save();
+        }
+
+        // Process payment through WooCommerce
+        $payment_result = $order->payment_complete();
+
+        if ( $payment_result ) {
+            return rest_ensure_response( array(
+                'success'    => true,
+                'order_id'   => $order->get_id(),
+                'status'     => $order->get_status(),
+                'message'    => __( 'Payment processed successfully.', 'schedspot' ),
+            ) );
+        } else {
+            return new WP_Error( 'payment_failed', __( 'Payment processing failed.', 'schedspot' ), array( 'status' => 500 ) );
+        }
+    }
+
+    /**
+     * Get payment order.
+     *
+     * @since 1.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function get_payment_order( $request ) {
+        $order_id = absint( $request['id'] );
+        $order = wc_get_order( $order_id );
+
+        if ( ! $order ) {
+            return new WP_Error( 'order_not_found', __( 'Order not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        return rest_ensure_response( array(
+            'id'           => $order->get_id(),
+            'order_key'    => $order->get_order_key(),
+            'status'       => $order->get_status(),
+            'total'        => $order->get_total(),
+            'currency'     => $order->get_currency(),
+            'date_created' => $order->get_date_created()->format( 'Y-m-d H:i:s' ),
+            'payment_url'  => $order->get_checkout_payment_url(),
+            'items'        => $this->get_order_items( $order ),
+        ) );
+    }
+
+    /**
+     * Update payment status.
+     *
+     * @since 1.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function update_payment_status( $request ) {
+        $order_id = absint( $request['id'] );
+        $status = sanitize_text_field( $request['status'] );
+
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return new WP_Error( 'order_not_found', __( 'Order not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        $order->update_status( $status );
+
+        return rest_ensure_response( array(
+            'success' => true,
+            'order_id' => $order->get_id(),
+            'status' => $order->get_status(),
+        ) );
+    }
+
+    /**
+     * Get order items.
+     *
+     * @since 1.0.0
+     * @param WC_Order $order WooCommerce order object.
+     * @return array Order items.
+     */
+    private function get_order_items( $order ) {
+        $items = array();
+
+        foreach ( $order->get_items() as $item ) {
+            $items[] = array(
+                'name'     => $item->get_name(),
+                'quantity' => $item->get_quantity(),
+                'total'    => $item->get_total(),
+            );
+        }
+
+        return $items;
     }
 
     /**
@@ -1212,5 +1544,234 @@ class SchedSpot_API {
         }
 
         return $data;
+    }
+
+    /**
+     * Get messages.
+     *
+     * @since 2.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function get_messages( $request ) {
+        $params = $request->get_params();
+        $user_id = get_current_user_id();
+
+        if ( isset( $params['conversation_with'] ) ) {
+            $other_user_id = absint( $params['conversation_with'] );
+            $messages = SchedSpot_Message::get_conversation( $user_id, $other_user_id, $params );
+        } else {
+            $conversations = SchedSpot_Message::get_user_conversations( $user_id, $params );
+            return rest_ensure_response( $conversations );
+        }
+
+        $formatted_messages = array();
+        foreach ( $messages as $message ) {
+            $formatted_messages[] = $message->get_formatted_data();
+        }
+
+        return rest_ensure_response( $formatted_messages );
+    }
+
+    /**
+     * Send message.
+     *
+     * @since 2.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function send_message( $request ) {
+        $params = $request->get_params();
+        $params['sender_id'] = get_current_user_id();
+
+        $messaging = new SchedSpot_Messaging();
+        $result = $messaging->send_message( $params );
+
+        if ( is_wp_error( $result ) ) {
+            return $result;
+        }
+
+        $message = new SchedSpot_Message( $result );
+        return rest_ensure_response( $message->get_formatted_data() );
+    }
+
+    /**
+     * Get single message.
+     *
+     * @since 2.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function get_message( $request ) {
+        $message_id = absint( $request['id'] );
+        $message = new SchedSpot_Message( $message_id );
+
+        if ( ! $message->id ) {
+            return new WP_Error( 'message_not_found', __( 'Message not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        return rest_ensure_response( $message->get_formatted_data() );
+    }
+
+    /**
+     * Update message.
+     *
+     * @since 2.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function update_message( $request ) {
+        $message_id = absint( $request['id'] );
+        $message = new SchedSpot_Message( $message_id );
+
+        if ( ! $message->id ) {
+            return new WP_Error( 'message_not_found', __( 'Message not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        $params = $request->get_params();
+
+        // Only allow marking as read for now
+        if ( isset( $params['mark_as_read'] ) && $params['mark_as_read'] ) {
+            $message->mark_as_read();
+        }
+
+        return rest_ensure_response( $message->get_formatted_data() );
+    }
+
+    /**
+     * Get conversation.
+     *
+     * @since 2.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function get_conversation( $request ) {
+        $user_id = get_current_user_id();
+        $other_user_id = absint( $request['user_id'] );
+        $params = $request->get_params();
+
+        $messages = SchedSpot_Message::get_conversation( $user_id, $other_user_id, $params );
+
+        $formatted_messages = array();
+        foreach ( $messages as $message ) {
+            $formatted_messages[] = $message->get_formatted_data();
+        }
+
+        return rest_ensure_response( $formatted_messages );
+    }
+
+    // Permission callbacks for messaging
+    public function check_messaging_permissions( $request ) {
+        return is_user_logged_in() && ( current_user_can( 'schedspot_send_messages' ) || current_user_can( 'manage_options' ) );
+    }
+
+    public function check_message_permissions( $request ) {
+        $message_id = absint( $request['id'] );
+        $message = new SchedSpot_Message( $message_id );
+
+        if ( ! $message->id ) {
+            return false;
+        }
+
+        $current_user_id = get_current_user_id();
+
+        // Admin can access all messages
+        if ( current_user_can( 'manage_options' ) ) {
+            return true;
+        }
+
+        // Users can access their own messages
+        return ( $message->sender_id === $current_user_id || $message->receiver_id === $current_user_id );
+    }
+
+    public function check_conversation_permissions( $request ) {
+        $current_user_id = get_current_user_id();
+        $other_user_id = absint( $request['user_id'] );
+
+        // Admin can access all conversations
+        if ( current_user_can( 'manage_options' ) ) {
+            return true;
+        }
+
+        // Users can access conversations they're part of
+        return $current_user_id > 0 && $other_user_id > 0;
+    }
+
+    /**
+     * Get worker payment settings.
+     *
+     * @since 1.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function get_worker_payment_settings( $request ) {
+        $worker_id = absint( $request['id'] );
+        $worker = new SchedSpot_Worker( $worker_id );
+
+        if ( ! $worker->id ) {
+            return new WP_Error( 'worker_not_found', __( 'Worker not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        $payment_settings = get_user_meta( $worker_id, 'schedspot_payment_settings', true );
+        if ( ! $payment_settings ) {
+            $payment_settings = array();
+        }
+
+        // Get earnings statistics
+        $stats = $worker->get_statistics();
+
+        $response_data = array_merge( $payment_settings, array(
+            'total_earnings' => $stats['total_earnings'] ?? 0,
+            'pending_payout' => $stats['pending_payout'] ?? 0,
+            'commission_rate' => get_option( 'schedspot_commission_rate', 10 ),
+        ) );
+
+        return rest_ensure_response( $response_data );
+    }
+
+    /**
+     * Update worker payment settings.
+     *
+     * @since 1.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function update_worker_payment_settings( $request ) {
+        $worker_id = absint( $request['id'] );
+        $worker = new SchedSpot_Worker( $worker_id );
+
+        if ( ! $worker->id ) {
+            return new WP_Error( 'worker_not_found', __( 'Worker not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        $params = $request->get_params();
+
+        $payment_settings = array(
+            'payout_method' => sanitize_text_field( $params['payout_method'] ?? '' ),
+            'payout_email' => sanitize_email( $params['payout_email'] ?? '' ),
+            'tax_id' => sanitize_text_field( $params['tax_id'] ?? '' ),
+        );
+
+        $updated = update_user_meta( $worker_id, 'schedspot_payment_settings', $payment_settings );
+
+        if ( $updated !== false ) {
+            return rest_ensure_response( array( 'success' => true, 'settings' => $payment_settings ) );
+        } else {
+            return new WP_Error( 'update_failed', __( 'Failed to update payment settings.', 'schedspot' ), array( 'status' => 500 ) );
+        }
+    }
+
+    /**
+     * Get worker payment settings arguments.
+     *
+     * @since 1.0.0
+     * @return array Arguments.
+     */
+    private function get_worker_payment_settings_args() {
+        return array(
+            'payout_method' => array( 'sanitize_callback' => 'sanitize_text_field' ),
+            'payout_email' => array( 'sanitize_callback' => 'sanitize_email' ),
+            'tax_id' => array( 'sanitize_callback' => 'sanitize_text_field' ),
+        );
     }
 }
