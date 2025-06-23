@@ -96,6 +96,9 @@ class SchedSpot_Install {
             'schedspot_commission_rate'        => 10, // percentage
             'schedspot_enable_sms'             => 'no',
             'schedspot_enable_geofencing'      => 'no',
+            'schedspot_google_maps_api_key'    => '',
+            'schedspot_default_service_radius' => 25.0,
+            'schedspot_distance_unit'          => 'km',
             'schedspot_auto_approve_bookings'  => 'no',
             'schedspot_install_sample_data'    => 'yes',
             'schedspot_enable_payments'        => 'yes',
@@ -216,6 +219,24 @@ CREATE TABLE {$wpdb->prefix}schedspot_payments (
   KEY order_id (order_id),
   KEY status (status),
   KEY payment_date (payment_date)
+) $collate;
+
+CREATE TABLE {$wpdb->prefix}schedspot_service_areas (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  worker_id bigint(20) unsigned NOT NULL,
+  name varchar(255) NOT NULL DEFAULT '',
+  type varchar(20) NOT NULL DEFAULT 'radius',
+  center_lat decimal(10,8) DEFAULT NULL,
+  center_lng decimal(11,8) DEFAULT NULL,
+  radius decimal(8,2) DEFAULT NULL,
+  polygon_data longtext DEFAULT NULL,
+  is_active tinyint(1) NOT NULL DEFAULT 1,
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY worker_id (worker_id),
+  KEY type (type),
+  KEY is_active (is_active)
 ) $collate;
         ";
 

@@ -88,6 +88,42 @@ Triggers: On booking status change (hook after payment or admin action), call Sc
 Scope: Backend. Possibly some frontend notifications.
 AI Guidance: Document usage of Google API client. Use token refresh logic. Keep sync code modular (only call in a single function per event).
 SMS Login and Notifications ✅ COMPLETED & VERIFIED (Bug Fixed: Missing sms_authenticate method)
+
+Geofencing (Location Services) ✅ COMPLETED (June 22, 2025)
+
+**Purpose:** Enable location-based service restrictions and distance calculations for workers and bookings.
+
+**Requirements:**
+- Google Maps API integration for geocoding and mapping
+- Distance calculations using Haversine formula
+- Service area management (circular and polygon areas)
+- Location validation during booking creation
+- Nearby worker discovery based on client location
+
+**Structure:**
+- `class-schedspot-geolocation.php` - Core geolocation functionality
+- `geolocation.js` - Frontend location selection and mapping
+- `admin/js/geolocation.js` - Admin service area management
+- Database table: `schedspot_service_areas`
+- Settings integration in admin panel
+
+**Key Code Elements:**
+- `SchedSpot_Geolocation::calculate_distance()` - Haversine distance calculation
+- `SchedSpot_Geolocation::worker_serves_location()` - Location validation
+- `SchedSpot_Geolocation::geocode_address()` - Address to coordinates conversion
+- `SchedSpot_Geolocation::get_nearby_workers()` - Worker discovery
+- Google Maps integration with drawing tools
+- AJAX endpoints for geocoding and worker search
+
+**Triggers:**
+- Booking form submission validates location against worker service areas
+- Worker dashboard allows service area management
+- Admin settings enable/disable geofencing functionality
+- Frontend maps show nearby workers and allow location selection
+
+**Scope:** v2.0+ extension providing comprehensive location-based services
+
+**Naming:** All classes prefixed with `SchedSpot_`, functions with `schedspot_`, database tables with `schedspot_`
 Description: Enable user login/verification via SMS (e.g. Twilio). Send SMS notifications on booking events.
 Dependencies: Twilio (or similar) API, SMS gateway credentials. Possibly use an existing library.
 Structure: includes/integrations/, e.g. class-schedspot-sms.php.

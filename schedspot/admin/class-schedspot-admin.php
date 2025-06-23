@@ -118,6 +118,12 @@ class SchedSpot_Admin {
         register_setting( 'schedspot_payment_settings', 'schedspot_commission_rate' );
         register_setting( 'schedspot_payment_settings', 'schedspot_payment_required' );
         register_setting( 'schedspot_payment_settings', 'schedspot_deposit_rate' );
+
+        // Geolocation settings
+        register_setting( 'schedspot_geolocation_settings', 'schedspot_enable_geofencing' );
+        register_setting( 'schedspot_geolocation_settings', 'schedspot_google_maps_api_key' );
+        register_setting( 'schedspot_geolocation_settings', 'schedspot_default_service_radius' );
+        register_setting( 'schedspot_geolocation_settings', 'schedspot_distance_unit' );
         register_setting( 'schedspot_payment_settings', 'schedspot_enable_payments' );
 
         // Google Calendar settings
@@ -146,6 +152,13 @@ class SchedSpot_Admin {
             __( 'Payment Settings', 'schedspot' ),
             array( $this, 'payment_section_callback' ),
             'schedspot_payment_settings'
+        );
+
+        add_settings_section(
+            'schedspot_geolocation_section',
+            __( 'Geolocation Settings', 'schedspot' ),
+            array( $this, 'geolocation_section_callback' ),
+            'schedspot_geolocation_settings'
         );
 
         // Add settings fields
@@ -255,6 +268,39 @@ class SchedSpot_Admin {
             array( $this, 'enable_payments_field_callback' ),
             'schedspot_payment_settings',
             'schedspot_payment_section'
+        );
+
+        // Geolocation settings fields
+        add_settings_field(
+            'schedspot_enable_geofencing',
+            __( 'Enable Geofencing', 'schedspot' ),
+            array( $this, 'enable_geofencing_field_callback' ),
+            'schedspot_geolocation_settings',
+            'schedspot_geolocation_section'
+        );
+
+        add_settings_field(
+            'schedspot_google_maps_api_key',
+            __( 'Google Maps API Key', 'schedspot' ),
+            array( $this, 'google_maps_api_key_field_callback' ),
+            'schedspot_geolocation_settings',
+            'schedspot_geolocation_section'
+        );
+
+        add_settings_field(
+            'schedspot_default_service_radius',
+            __( 'Default Service Radius (km)', 'schedspot' ),
+            array( $this, 'default_service_radius_field_callback' ),
+            'schedspot_geolocation_settings',
+            'schedspot_geolocation_section'
+        );
+
+        add_settings_field(
+            'schedspot_distance_unit',
+            __( 'Distance Unit', 'schedspot' ),
+            array( $this, 'distance_unit_field_callback' ),
+            'schedspot_geolocation_settings',
+            'schedspot_geolocation_section'
         );
     }
 
@@ -412,12 +458,15 @@ class SchedSpot_Admin {
                 <a href="?page=schedspot-settings&tab=payment" class="nav-tab <?php echo $active_tab == 'payment' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Payment', 'schedspot' ); ?></a>
                 <a href="?page=schedspot-settings&tab=calendar" class="nav-tab <?php echo $active_tab == 'calendar' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Calendar', 'schedspot' ); ?></a>
                 <a href="?page=schedspot-settings&tab=sms" class="nav-tab <?php echo $active_tab == 'sms' ? 'nav-tab-active' : ''; ?>"><?php _e( 'SMS', 'schedspot' ); ?></a>
+                <a href="?page=schedspot-settings&tab=geolocation" class="nav-tab <?php echo $active_tab == 'geolocation' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Geolocation', 'schedspot' ); ?></a>
             </h2>
             
             <?php if ( $active_tab == 'calendar' ) : ?>
                 <?php $this->render_calendar_settings(); ?>
             <?php elseif ( $active_tab == 'sms' ) : ?>
                 <?php $this->render_sms_settings(); ?>
+            <?php elseif ( $active_tab == 'geolocation' ) : ?>
+                <?php $this->render_geolocation_settings(); ?>
             <?php else : ?>
                 <form method="post" action="options.php">
                     <?php
@@ -430,6 +479,9 @@ class SchedSpot_Admin {
                     } elseif ( $active_tab == 'payment' ) {
                         settings_fields( 'schedspot_payment_settings' );
                         do_settings_sections( 'schedspot_payment_settings' );
+                    } elseif ( $active_tab == 'geolocation' ) {
+                        settings_fields( 'schedspot_geolocation_settings' );
+                        do_settings_sections( 'schedspot_geolocation_settings' );
                     }
                     submit_button();
                     ?>
@@ -2055,6 +2107,140 @@ class SchedSpot_Admin {
             });
         }
         </script>
+        <?php
+    }
+
+    /**
+     * Geolocation section callback.
+     *
+     * @since 2.0.0
+     */
+    public function geolocation_section_callback() {
+        echo '<p>' . __( 'Configure geolocation and geofencing settings for location-based services.', 'schedspot' ) . '</p>';
+    }
+
+    /**
+     * Enable geofencing field callback.
+     *
+     * @since 2.0.0
+     */
+    public function enable_geofencing_field_callback() {
+        $value = get_option( 'schedspot_enable_geofencing', false );
+        echo '<input type="checkbox" name="schedspot_enable_geofencing" value="1"' . checked( $value, 1, false ) . ' />';
+        echo '<label>' . __( 'Enable location-based service restrictions', 'schedspot' ) . '</label>';
+        echo '<p class="description">' . __( 'When enabled, workers can define service areas and bookings will be restricted by location.', 'schedspot' ) . '</p>';
+    }
+
+    /**
+     * Google Maps API key field callback.
+     *
+     * @since 2.0.0
+     */
+    public function google_maps_api_key_field_callback() {
+        $value = get_option( 'schedspot_google_maps_api_key', '' );
+        echo '<input type="text" name="schedspot_google_maps_api_key" value="' . esc_attr( $value ) . '" class="regular-text" />';
+        echo '<p class="description">' . sprintf(
+            __( 'Required for geocoding and maps. Get your API key from <a href="%s" target="_blank">Google Cloud Console</a>.', 'schedspot' ),
+            'https://console.cloud.google.com/apis/credentials'
+        ) . '</p>';
+    }
+
+    /**
+     * Default service radius field callback.
+     *
+     * @since 2.0.0
+     */
+    public function default_service_radius_field_callback() {
+        $value = get_option( 'schedspot_default_service_radius', 25.0 );
+        echo '<input type="number" name="schedspot_default_service_radius" value="' . esc_attr( $value ) . '" min="1" max="500" step="0.1" />';
+        echo '<p class="description">' . __( 'Default service radius in kilometers when workers don\'t specify custom service areas.', 'schedspot' ) . '</p>';
+    }
+
+    /**
+     * Distance unit field callback.
+     *
+     * @since 2.0.0
+     */
+    public function distance_unit_field_callback() {
+        $value = get_option( 'schedspot_distance_unit', 'km' );
+        echo '<select name="schedspot_distance_unit">';
+        echo '<option value="km"' . selected( $value, 'km', false ) . '>' . __( 'Kilometers', 'schedspot' ) . '</option>';
+        echo '<option value="miles"' . selected( $value, 'miles', false ) . '>' . __( 'Miles', 'schedspot' ) . '</option>';
+        echo '</select>';
+        echo '<p class="description">' . __( 'Unit for displaying distances to users.', 'schedspot' ) . '</p>';
+    }
+
+    /**
+     * Render geolocation settings page.
+     *
+     * @since 2.0.0
+     */
+    private function render_geolocation_settings() {
+        $is_enabled = get_option( 'schedspot_enable_geofencing', false );
+        $api_key = get_option( 'schedspot_google_maps_api_key', '' );
+
+        ?>
+        <form method="post" action="options.php">
+            <?php
+            settings_fields( 'schedspot_geolocation_settings' );
+            do_settings_sections( 'schedspot_geolocation_settings' );
+            ?>
+
+            <table class="form-table">
+                <?php if ( $is_enabled && empty( $api_key ) ) : ?>
+                <tr>
+                    <td colspan="2">
+                        <div class="notice notice-warning inline">
+                            <p><?php _e( 'Geofencing is enabled but Google Maps API key is missing. Please add your API key below.', 'schedspot' ); ?></p>
+                        </div>
+                    </td>
+                </tr>
+                <?php endif; ?>
+
+                <?php if ( $is_enabled && ! empty( $api_key ) ) : ?>
+                <tr>
+                    <th scope="row"><?php _e( 'Test Geocoding', 'schedspot' ); ?></th>
+                    <td>
+                        <input type="text" id="test_address" placeholder="123 Main St, City, State" class="regular-text" />
+                        <button type="button" class="button" onclick="testGeocoding()"><?php _e( 'Test Address', 'schedspot' ); ?></button>
+                        <p class="description"><?php _e( 'Test geocoding functionality with a sample address.', 'schedspot' ); ?></p>
+                        <div id="geocoding_result"></div>
+                    </td>
+                </tr>
+                <?php endif; ?>
+            </table>
+
+            <?php submit_button( __( 'Save Geolocation Settings', 'schedspot' ), 'primary', 'schedspot_geolocation_save' ); ?>
+        </form>
+
+        <?php if ( $is_enabled && ! empty( $api_key ) ) : ?>
+        <script>
+        function testGeocoding() {
+            var address = document.getElementById('test_address').value;
+            if (!address) {
+                alert('<?php _e( 'Please enter an address.', 'schedspot' ); ?>');
+                return;
+            }
+
+            jQuery.post(ajaxurl, {
+                action: 'schedspot_geocode_address',
+                address: address,
+                nonce: '<?php echo wp_create_nonce( 'schedspot_geolocation_nonce' ); ?>'
+            }, function(response) {
+                var result = document.getElementById('geocoding_result');
+                if (response.success) {
+                    result.innerHTML = '<div class="notice notice-success inline"><p>' +
+                        '<?php _e( 'Success! Coordinates:', 'schedspot' ); ?> ' +
+                        response.data.lat + ', ' + response.data.lng +
+                        '<br><?php _e( 'Formatted address:', 'schedspot' ); ?> ' + response.data.formatted_address +
+                        '</p></div>';
+                } else {
+                    result.innerHTML = '<div class="notice notice-error inline"><p>' + response.data.message + '</p></div>';
+                }
+            });
+        }
+        </script>
+        <?php endif; ?>
         <?php
     }
 }

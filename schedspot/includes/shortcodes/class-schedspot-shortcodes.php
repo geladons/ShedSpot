@@ -140,8 +140,31 @@ class SchedSpot_Shortcodes {
 
                     <div class="schedspot-form-row">
                         <label for="schedspot_client_address"><?php _e( 'Service Address', 'schedspot' ); ?></label>
-                        <textarea name="client_address" id="schedspot_client_address" rows="3" placeholder="<?php _e( 'Enter the address where the service should be performed', 'schedspot' ); ?>"></textarea>
+                        <textarea name="client_address" id="schedspot-client-address" rows="3" placeholder="<?php _e( 'Enter the address where the service should be performed', 'schedspot' ); ?>"></textarea>
+                        <?php if ( get_option( 'schedspot_enable_geofencing', false ) ) : ?>
+                        <button type="button" class="schedspot-btn schedspot-btn-secondary schedspot-get-location" style="margin-top: 10px;">
+                            <?php _e( 'Use My Current Location', 'schedspot' ); ?>
+                        </button>
+                        <?php endif; ?>
                     </div>
+
+                    <?php if ( get_option( 'schedspot_enable_geofencing', false ) ) : ?>
+                    <!-- Hidden location fields -->
+                    <input type="hidden" name="client_lat" id="schedspot-client-lat" value="">
+                    <input type="hidden" name="client_lng" id="schedspot-client-lng" value="">
+
+                    <!-- Location Map -->
+                    <div class="schedspot-form-row">
+                        <label><?php _e( 'Service Location', 'schedspot' ); ?></label>
+                        <div id="schedspot-booking-map" style="height: 300px; width: 100%; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;"></div>
+                        <p class="description"><?php _e( 'Click on the map or enter an address above to set the service location.', 'schedspot' ); ?></p>
+                    </div>
+
+                    <!-- Nearby Workers Display -->
+                    <div id="schedspot-nearby-workers" style="margin-top: 15px;">
+                        <!-- Nearby workers will be populated here by JavaScript -->
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="schedspot-form-section">
@@ -329,8 +352,26 @@ class SchedSpot_Shortcodes {
             'client_email'   => sanitize_email( $_POST['client_email'] ),
             'client_phone'   => sanitize_text_field( $_POST['client_phone'] ),
             'client_address' => sanitize_textarea_field( $_POST['client_address'] ),
+            'client_lat'     => isset( $_POST['client_lat'] ) ? floatval( $_POST['client_lat'] ) : null,
+            'client_lng'     => isset( $_POST['client_lng'] ) ? floatval( $_POST['client_lng'] ) : null,
             'notes'          => sanitize_textarea_field( $_POST['notes'] ),
         );
+
+        // Validate location if geofencing is enabled
+        if ( get_option( 'schedspot_enable_geofencing', false ) ) {
+            $geolocation = new SchedSpot_Geolocation();
+            $location_errors = array();
+            $location_errors = $geolocation->validate_booking_location( $booking_data, $location_errors );
+
+            if ( ! empty( $location_errors ) ) {
+                echo '<div class="schedspot-notice schedspot-notice-error">';
+                foreach ( $location_errors as $error ) {
+                    echo '<p>' . esc_html( $error ) . '</p>';
+                }
+                echo '</div>';
+                return;
+            }
+        }
 
         // Calculate end time
         $start_datetime = new DateTime( $booking_data['booking_date'] . ' ' . $booking_data['start_time'] );
@@ -612,6 +653,18 @@ class SchedSpot_Shortcodes {
                 </div>
             <?php endif; ?>
 
+            <!-- Service Areas Management -->
+            <?php if ( get_option( 'schedspot_enable_geofencing', false ) ) : ?>
+            <div class="schedspot-service-areas">
+                <h4><?php _e( 'Service Areas', 'schedspot' ); ?></h4>
+                <p><?php _e( 'Define the areas where you provide services. This helps customers find you when they\'re in your service area.', 'schedspot' ); ?></p>
+                <div id="schedspot-service-area-map" style="height: 400px; width: 100%; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px;"></div>
+                <div id="schedspot-service-areas-list">
+                    <p><?php _e( 'Loading service areas...', 'schedspot' ); ?></p>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Quick Actions -->
             <div class="schedspot-quick-actions">
                 <h4><?php _e( 'Quick Actions', 'schedspot' ); ?></h4>
@@ -619,6 +672,9 @@ class SchedSpot_Shortcodes {
                     <button class="schedspot-btn schedspot-btn-primary" onclick="toggleAvailability()"><?php _e( 'Toggle Availability', 'schedspot' ); ?></button>
                     <button class="schedspot-btn" onclick="openAvailabilityEditor()"><?php _e( 'Edit Schedule', 'schedspot' ); ?></button>
                     <button class="schedspot-btn" onclick="viewEarnings()"><?php _e( 'View Earnings', 'schedspot' ); ?></button>
+                    <?php if ( get_option( 'schedspot_enable_geofencing', false ) ) : ?>
+                    <button class="schedspot-btn" onclick="manageServiceAreas()"><?php _e( 'Manage Service Areas', 'schedspot' ); ?></button>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -801,6 +857,12 @@ class SchedSpot_Shortcodes {
     private function enqueue_booking_assets() {
         // For now, we'll add inline styles. In future versions, we'll use separate CSS files
         add_action( 'wp_footer', array( $this, 'output_booking_styles' ) );
+
+        // Enqueue geolocation scripts if enabled
+        if ( get_option( 'schedspot_enable_geofencing', false ) ) {
+            $geolocation = new SchedSpot_Geolocation();
+            $geolocation->enqueue_frontend_scripts();
+        }
     }
 
     /**

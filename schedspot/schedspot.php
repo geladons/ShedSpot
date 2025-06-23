@@ -116,6 +116,7 @@ final class SchedSpot_Core {
         include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-woocommerce.php';
         include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-gcalendar.php';
         include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-sms.php';
+        include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-geolocation.php';
 
         // Admin includes
         if ( is_admin() ) {
@@ -177,6 +178,9 @@ final class SchedSpot_Core {
 
         // Initialize SMS integration
         new SchedSpot_SMS();
+
+        // Initialize geolocation integration
+        new SchedSpot_Geolocation();
 
         // Initialize shortcodes
         new SchedSpot_Shortcodes();
