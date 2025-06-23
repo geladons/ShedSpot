@@ -1,0 +1,442 @@
+/**
+ * SchedSpot Profile Management Styles
+ * 
+ * @package SchedSpot
+ * @version 1.0.0
+ */
+
+.schedspot-profile-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.profile-header h2 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.8em;
+}
+
+.profile-header p {
+    color: #666;
+    font-size: 1.1em;
+    margin: 0;
+}
+
+/* Tab Navigation */
+.profile-tabs {
+    display: flex;
+    border-bottom: 2px solid #f0f0f0;
+    margin-bottom: 30px;
+    overflow-x: auto;
+}
+
+.tab-button {
+    background: none;
+    border: none;
+    padding: 15px 20px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 500;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-button:hover {
+    color: #007cba;
+    background: #f8f9fa;
+}
+
+.tab-button.active {
+    color: #007cba;
+    border-bottom-color: #007cba;
+    background: #f0f8ff;
+}
+
+.tab-button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Form Styling */
+.profile-form {
+    max-width: 600px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #007cba;
+}
+
+.form-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.2em;
+}
+
+.form-row {
+    margin-bottom: 20px;
+}
+
+.form-row label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95em;
+    transition: border-color 0.3s ease;
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.2);
+}
+
+.form-row textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-row .description {
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 5px;
+    line-height: 1.4;
+}
+
+/* Checkbox and Radio Styling */
+.checkbox-group,
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.checkbox-item,
+.radio-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkbox-item input[type="checkbox"],
+.radio-item input[type="radio"] {
+    width: auto;
+    margin: 0;
+}
+
+.checkbox-item label,
+.radio-item label {
+    margin: 0;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+/* Skills Management */
+.skills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.skill-tag {
+    background: #e9ecef;
+    color: #495057;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.85em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.skill-tag.selected {
+    background: #007cba;
+    color: white;
+}
+
+.skill-tag .remove-skill {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+
+.skill-tag .remove-skill:hover {
+    opacity: 1;
+}
+
+.add-skill-input {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.add-skill-input input {
+    flex: 1;
+}
+
+.add-skill-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background-color 0.3s ease;
+}
+
+.add-skill-btn:hover {
+    background: #218838;
+}
+
+/* Avatar Upload */
+.avatar-upload-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.current-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px;
+    border: 4px solid #e0e0e0;
+}
+
+.avatar-upload-btn {
+    background: #007cba;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease;
+}
+
+.avatar-upload-btn:hover {
+    background: #005a87;
+}
+
+/* Action Buttons */
+.form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: #007cba;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #005a87;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 124, 186, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Success/Error Messages */
+.profile-message {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.profile-message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.profile-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Data Export/Delete Section */
+.danger-zone {
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+.danger-zone h3 {
+    color: #c53030;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.danger-zone p {
+    color: #744210;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.danger-actions {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .schedspot-profile-content {
+        padding: 15px;
+        margin: 10px;
+    }
+    
+    .profile-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .tab-button {
+        padding: 12px 15px;
+        font-size: 0.9em;
+    }
+    
+    .form-section {
+        padding: 15px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        justify-content: center;
+    }
+    
+    .danger-actions {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .schedspot-profile-content {
+        padding: 12px;
+        margin: 5px;
+    }
+    
+    .profile-header h2 {
+        font-size: 1.5em;
+    }
+    
+    .tab-button {
+        padding: 10px 12px;
+        font-size: 0.85em;
+    }
+    
+    .form-section {
+        padding: 12px;
+    }
+    
+    .current-avatar {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .add-skill-input {
+        flex-direction: column;
+    }
+}

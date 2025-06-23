@@ -108,6 +108,7 @@ final class SchedSpot_Core {
     public function includes() {
         // Core includes
         include_once SCHEDSPOT_INCLUDES_DIR . 'class-schedspot-install.php';
+        include_once SCHEDSPOT_INCLUDES_DIR . 'class-schedspot-assets.php';
         include_once SCHEDSPOT_INCLUDES_DIR . 'models/class-schedspot-booking.php';
         include_once SCHEDSPOT_INCLUDES_DIR . 'models/class-schedspot-service.php';
         include_once SCHEDSPOT_INCLUDES_DIR . 'models/class-schedspot-worker.php';
@@ -172,6 +173,9 @@ final class SchedSpot_Core {
      * @since 0.1.0
      */
     private function init_components() {
+        // Initialize assets manager
+        new SchedSpot_Assets();
+
         // Initialize API
         new SchedSpot_API();
 

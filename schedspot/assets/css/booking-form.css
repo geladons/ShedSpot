@@ -1,0 +1,288 @@
+/**
+ * SchedSpot Booking Form Styles
+ * 
+ * @package SchedSpot
+ * @version 1.0.0
+ */
+
+/* Additional form enhancements */
+.schedspot-form-row.focused {
+    transform: translateY(-2px);
+}
+
+.schedspot-form-row.error input,
+.schedspot-form-row.error select,
+.schedspot-form-row.error textarea {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.error-message {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 5px;
+    display: block;
+}
+
+.schedspot-form-row input:focus,
+.schedspot-form-row select:focus,
+.schedspot-form-row textarea:focus {
+    border-color: #007cba;
+    box-shadow: 0 0 0 0.2rem rgba(0, 124, 186, 0.25);
+    outline: none;
+}
+
+/* Worker selection enhancements */
+.worker-selection-mode {
+    margin-bottom: 15px;
+}
+
+.worker-selection-mode label {
+    display: inline-block;
+    margin-right: 20px;
+    font-weight: normal;
+}
+
+.worker-selection-mode input[type="radio"] {
+    margin-right: 8px;
+}
+
+#manual-worker-selection {
+    margin-top: 15px;
+}
+
+.worker-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.worker-card:hover {
+    border-color: #007cba;
+    box-shadow: 0 2px 8px rgba(0, 124, 186, 0.15);
+}
+
+.worker-card.selected {
+    border-color: #007cba;
+    background-color: #f0f8ff;
+    box-shadow: 0 2px 8px rgba(0, 124, 186, 0.25);
+}
+
+.worker-card.unavailable {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #f8f9fa;
+}
+
+.worker-card h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.worker-card .worker-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.worker-card .worker-rating {
+    color: #ffa500;
+    font-size: 0.9em;
+}
+
+.worker-card .worker-rate {
+    font-weight: bold;
+    color: #007cba;
+}
+
+.worker-card .worker-skills {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.worker-card .select-worker-btn {
+    background: #007cba;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease;
+}
+
+.worker-card .select-worker-btn:hover {
+    background: #005a87;
+}
+
+.worker-card.selected .select-worker-btn {
+    background: #28a745;
+}
+
+.worker-card.selected .select-worker-btn:hover {
+    background: #218838;
+}
+
+/* Payment information styling */
+.schedspot-payment-info {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.schedspot-payment-info h3 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 2px solid #007cba;
+    padding-bottom: 10px;
+}
+
+.payment-details p {
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+.payment-methods {
+    margin-top: 15px;
+}
+
+.payment-icons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.payment-method {
+    background: #007cba;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.security-notice {
+    margin-top: 15px;
+    padding: 10px;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 4px;
+    color: #155724;
+}
+
+/* Geolocation and map styling */
+#schedspot-booking-map {
+    height: 300px;
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.schedspot-get-location {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.schedspot-get-location .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+#schedspot-nearby-workers {
+    margin-top: 15px;
+}
+
+/* Form validation and loading states */
+.schedspot-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.schedspot-btn .dashicons.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Notification styles */
+.schedspot-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 4px;
+    color: white;
+    font-weight: 500;
+    z-index: 9999;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.schedspot-notification.success {
+    background: #28a745;
+}
+
+.schedspot-notification.error {
+    background: #dc3545;
+}
+
+.schedspot-notification.info {
+    background: #17a2b8;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .schedspot-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .worker-card .worker-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .payment-icons {
+        justify-content: center;
+    }
+    
+    .schedspot-notification {
+        left: 20px;
+        right: 20px;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .schedspot-form-container {
+        padding: 15px;
+    }
+    
+    .schedspot-form-section {
+        padding: 15px;
+    }
+    
+    .worker-card {
+        padding: 12px;
+    }
+    
+    .schedspot-payment-info {
+        padding: 15px;
+    }
+}

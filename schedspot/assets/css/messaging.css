@@ -1,0 +1,428 @@
+/**
+ * SchedSpot Messaging System Styles
+ * 
+ * @package SchedSpot
+ * @version 1.0.0
+ */
+
+.schedspot-messaging {
+    display: flex;
+    height: 600px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.conversations-list {
+    width: 300px;
+    border-right: 1px solid #ddd;
+    background: #f8f9fa;
+    overflow-y: auto;
+}
+
+.conversations-header {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    background: #fff;
+    font-weight: 600;
+    color: #333;
+}
+
+.conversation-item {
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    position: relative;
+}
+
+.conversation-item:hover {
+    background: #e9ecef;
+}
+
+.conversation-item.active {
+    background: #007cba;
+    color: white;
+}
+
+.conversation-item.active .conversation-preview {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.conversation-name {
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 0.95em;
+}
+
+.conversation-preview {
+    font-size: 0.85em;
+    color: #666;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.conversation-time {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 0.75em;
+    color: #999;
+}
+
+.conversation-item.active .conversation-time {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.unread-indicator {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: #007cba;
+    border-radius: 50%;
+}
+
+.conversation-item.active .unread-indicator {
+    background: white;
+}
+
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chat-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chat-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.chat-user-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.chat-user-status {
+    font-size: 0.85em;
+    color: #666;
+}
+
+.chat-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-action-btn {
+    background: none;
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.chat-action-btn:hover {
+    background: #f8f9fa;
+    border-color: #007cba;
+    color: #007cba;
+}
+
+.messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f8f9fa;
+}
+
+.message {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.message.sent {
+    flex-direction: row-reverse;
+}
+
+.message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.message-content {
+    max-width: 70%;
+    background: #fff;
+    padding: 12px 16px;
+    border-radius: 18px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.message.sent .message-content {
+    background: #007cba;
+    color: white;
+}
+
+.message-text {
+    line-height: 1.4;
+    margin: 0;
+    word-wrap: break-word;
+}
+
+.message-time {
+    font-size: 0.75em;
+    color: #999;
+    margin-top: 5px;
+    text-align: right;
+}
+
+.message.sent .message-time {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.message-status {
+    font-size: 0.7em;
+    color: #999;
+    margin-top: 2px;
+    text-align: right;
+}
+
+.message.sent .message-status {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.message-attachment {
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.message.sent .message-attachment {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.attachment-icon {
+    width: 24px;
+    height: 24px;
+    color: #666;
+}
+
+.message.sent .attachment-icon {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.attachment-info {
+    flex: 1;
+}
+
+.attachment-name {
+    font-size: 0.85em;
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.attachment-size {
+    font-size: 0.75em;
+    color: #999;
+}
+
+.message.sent .attachment-size {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.message-input-area {
+    padding: 15px 20px;
+    border-top: 1px solid #ddd;
+    background: #fff;
+}
+
+.message-input-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.message-input {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 10px 15px;
+    resize: none;
+    max-height: 100px;
+    min-height: 40px;
+    font-family: inherit;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.message-input:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.2);
+}
+
+.message-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.message-action-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: #f8f9fa;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.message-action-btn:hover {
+    background: #e9ecef;
+    color: #007cba;
+}
+
+.send-message-btn {
+    background: #007cba;
+    color: white;
+}
+
+.send-message-btn:hover {
+    background: #005a87;
+}
+
+.send-message-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* File upload area */
+.file-upload-area {
+    display: none;
+    padding: 10px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+}
+
+.file-upload-area.active {
+    display: block;
+    border-color: #007cba;
+    background: #f0f8ff;
+}
+
+.file-upload-text {
+    color: #666;
+    font-size: 0.85em;
+}
+
+/* Empty state */
+.no-conversation-selected {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    background: #f8f9fa;
+}
+
+.no-conversation-selected .dashicons {
+    font-size: 64px;
+    color: #ddd;
+    margin-bottom: 15px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .schedspot-messaging {
+        height: 500px;
+        flex-direction: column;
+    }
+    
+    .conversations-list {
+        width: 100%;
+        height: 200px;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .chat-area {
+        height: 300px;
+    }
+    
+    .message-content {
+        max-width: 85%;
+    }
+}
+
+@media (max-width: 480px) {
+    .schedspot-messaging {
+        height: 400px;
+    }
+    
+    .conversations-list {
+        height: 150px;
+    }
+    
+    .chat-area {
+        height: 250px;
+    }
+    
+    .conversation-item {
+        padding: 12px;
+    }
+    
+    .messages-container {
+        padding: 15px;
+    }
+    
+    .message-input-area {
+        padding: 12px 15px;
+    }
+    
+    .message-content {
+        max-width: 90%;
+        padding: 10px 12px;
+    }
+}
