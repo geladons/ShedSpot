@@ -3,7 +3,7 @@
  * Admin Class
  *
  * @package SchedSpot
- * @version 0.1.0
+ * @version 1.0.0
  */
 
 // Prevent direct access
@@ -15,14 +15,21 @@ if ( ! defined( 'ABSPATH' ) ) {
  * SchedSpot_Admin Class.
  *
  * @class SchedSpot_Admin
- * @version 0.1.0
+ * @version 1.0.0
  */
 class SchedSpot_Admin {
 
     /**
+     * Admin component instances.
+     *
+     * @var array
+     */
+    private $components = array();
+
+    /**
      * Constructor.
      *
-     * @since 0.1.0
+     * @since 1.0.0
      */
     public function __construct() {
         $this->init();
@@ -31,15 +38,39 @@ class SchedSpot_Admin {
     /**
      * Initialize admin functionality.
      *
-     * @since 0.1.0
+     * @since 1.0.0
      */
     public function init() {
+        // Load admin component classes
+        $this->load_components();
+
+        // Initialize hooks
         add_action( 'admin_menu', array( $this, 'admin_menu' ) );
-        add_action( 'admin_init', array( $this, 'admin_init' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'admin_scripts' ) );
         add_filter( 'plugin_action_links_' . SCHEDSPOT_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
         add_action( 'wp_ajax_schedspot_switch_role', array( $this, 'handle_role_switch' ) );
         add_action( 'admin_bar_menu', array( $this, 'add_admin_bar_role_switcher' ), 100 );
+    }
+
+    /**
+     * Load admin component classes.
+     *
+     * @since 1.0.0
+     */
+    private function load_components() {
+        // Include component files
+        require_once SCHEDSPOT_ADMIN_DIR . 'class-schedspot-admin-bookings.php';
+        require_once SCHEDSPOT_ADMIN_DIR . 'class-schedspot-admin-services.php';
+        require_once SCHEDSPOT_ADMIN_DIR . 'class-schedspot-admin-workers.php';
+        require_once SCHEDSPOT_ADMIN_DIR . 'class-schedspot-admin-settings.php';
+        require_once SCHEDSPOT_ADMIN_DIR . 'class-schedspot-admin-analytics.php';
+
+        // Initialize components
+        $this->components['bookings'] = new SchedSpot_Admin_Bookings();
+        $this->components['services'] = new SchedSpot_Admin_Services();
+        $this->components['workers'] = new SchedSpot_Admin_Workers();
+        $this->components['settings'] = new SchedSpot_Admin_Settings();
+        $this->components['analytics'] = new SchedSpot_Admin_Analytics();
     }
 
     /**
@@ -66,7 +97,7 @@ class SchedSpot_Admin {
             __( 'Bookings', 'schedspot' ),
             'manage_options',
             'schedspot-bookings',
-            array( $this, 'bookings_page' )
+            array( $this->components['bookings'], 'bookings_page' )
         );
 
         // Services submenu
@@ -76,7 +107,7 @@ class SchedSpot_Admin {
             __( 'Services', 'schedspot' ),
             'manage_options',
             'schedspot-services',
-            array( $this, 'services_page' )
+            array( $this->components['services'], 'services_page' )
         );
 
         // Workers submenu
@@ -86,7 +117,17 @@ class SchedSpot_Admin {
             __( 'Workers', 'schedspot' ),
             'manage_options',
             'schedspot-workers',
-            array( $this, 'workers_page' )
+            array( $this->components['workers'], 'workers_page' )
+        );
+
+        // Analytics submenu
+        add_submenu_page(
+            'schedspot',
+            __( 'Analytics', 'schedspot' ),
+            __( 'Analytics', 'schedspot' ),
+            'manage_options',
+            'schedspot-analytics',
+            array( $this->components['analytics'], 'analytics_page' )
         );
 
         // Settings submenu
@@ -96,7 +137,7 @@ class SchedSpot_Admin {
             __( 'Settings', 'schedspot' ),
             'manage_options',
             'schedspot-settings',
-            array( $this, 'settings_page' )
+            array( $this->components['settings'], 'settings_page' )
         );
 
         // Role Switcher submenu
@@ -110,369 +151,17 @@ class SchedSpot_Admin {
         );
     }
 
-    /**
-     * Initialize admin settings.
-     *
-     * @since 0.1.0
-     */
-    public function admin_init() {
-        // Register settings
-        register_setting( 'schedspot_general_settings', 'schedspot_default_timezone' );
-        register_setting( 'schedspot_general_settings', 'schedspot_date_format' );
-        register_setting( 'schedspot_general_settings', 'schedspot_time_format' );
-        register_setting( 'schedspot_general_settings', 'schedspot_currency' );
 
-        register_setting( 'schedspot_booking_settings', 'schedspot_default_slot_length' );
-        register_setting( 'schedspot_booking_settings', 'schedspot_minimum_notice' );
-        register_setting( 'schedspot_booking_settings', 'schedspot_auto_approve_bookings' );
-
-        register_setting( 'schedspot_payment_settings', 'schedspot_system_fee_per_hour' );
-        register_setting( 'schedspot_payment_settings', 'schedspot_commission_rate' );
-        register_setting( 'schedspot_payment_settings', 'schedspot_payment_required' );
-        register_setting( 'schedspot_payment_settings', 'schedspot_deposit_rate' );
-
-        // Geolocation settings
-        register_setting( 'schedspot_geolocation_settings', 'schedspot_enable_geofencing' );
-        register_setting( 'schedspot_geolocation_settings', 'schedspot_google_maps_api_key' );
-        register_setting( 'schedspot_geolocation_settings', 'schedspot_default_service_radius' );
-        register_setting( 'schedspot_geolocation_settings', 'schedspot_distance_unit' );
-        register_setting( 'schedspot_payment_settings', 'schedspot_enable_payments' );
-
-        // Google Calendar settings
-        register_setting( 'schedspot_calendar_settings', 'schedspot_gcal_enabled' );
-        register_setting( 'schedspot_calendar_settings', 'schedspot_gcal_client_id' );
-        register_setting( 'schedspot_calendar_settings', 'schedspot_gcal_client_secret' );
-        register_setting( 'schedspot_calendar_settings', 'schedspot_gcal_calendar_id' );
-
-        // SMS settings
-        register_setting( 'schedspot_sms_settings', 'schedspot_sms_enabled' );
-        register_setting( 'schedspot_sms_settings', 'schedspot_sms_provider' );
-        register_setting( 'schedspot_sms_settings', 'schedspot_twilio_account_sid' );
-        register_setting( 'schedspot_sms_settings', 'schedspot_twilio_auth_token' );
-        register_setting( 'schedspot_sms_settings', 'schedspot_twilio_phone_number' );
-        register_setting( 'schedspot_sms_settings', 'schedspot_sms_booking_notifications' );
-        register_setting( 'schedspot_sms_settings', 'schedspot_sms_message_notifications' );
-
-        // Messaging settings
-        register_setting( 'schedspot_messaging_settings', 'schedspot_enable_messaging' );
-        register_setting( 'schedspot_messaging_settings', 'schedspot_allow_file_attachments' );
-        register_setting( 'schedspot_messaging_settings', 'schedspot_max_file_size' );
-        register_setting( 'schedspot_messaging_settings', 'schedspot_allowed_file_types' );
-        register_setting( 'schedspot_messaging_settings', 'schedspot_message_retention_days' );
-
-        // Email notification settings
-        register_setting( 'schedspot_email_settings', 'schedspot_email_notifications_enabled' );
-        register_setting( 'schedspot_email_settings', 'schedspot_admin_email' );
-        register_setting( 'schedspot_email_settings', 'schedspot_email_from_name' );
-        register_setting( 'schedspot_email_settings', 'schedspot_email_from_address' );
-        register_setting( 'schedspot_email_settings', 'schedspot_booking_confirmation_template' );
-        register_setting( 'schedspot_email_settings', 'schedspot_booking_reminder_template' );
-
-        // Advanced settings
-        register_setting( 'schedspot_advanced_settings', 'schedspot_enable_debug_mode' );
-        register_setting( 'schedspot_advanced_settings', 'schedspot_cache_duration' );
-        register_setting( 'schedspot_advanced_settings', 'schedspot_api_rate_limit' );
-        register_setting( 'schedspot_advanced_settings', 'schedspot_cleanup_old_data' );
-        register_setting( 'schedspot_advanced_settings', 'schedspot_data_retention_days' );
-
-        // Add settings sections
-        add_settings_section(
-            'schedspot_general_section',
-            __( 'General Settings', 'schedspot' ),
-            array( $this, 'general_section_callback' ),
-            'schedspot_general_settings'
-        );
-
-        add_settings_section(
-            'schedspot_messaging_section',
-            __( 'Messaging Settings', 'schedspot' ),
-            array( $this, 'messaging_section_callback' ),
-            'schedspot_messaging_settings'
-        );
-
-        add_settings_section(
-            'schedspot_email_section',
-            __( 'Email Settings', 'schedspot' ),
-            array( $this, 'email_section_callback' ),
-            'schedspot_email_settings'
-        );
-
-        add_settings_section(
-            'schedspot_advanced_section',
-            __( 'Advanced Settings', 'schedspot' ),
-            array( $this, 'advanced_section_callback' ),
-            'schedspot_advanced_settings'
-        );
-
-        add_settings_section(
-            'schedspot_booking_section',
-            __( 'Booking Settings', 'schedspot' ),
-            array( $this, 'booking_section_callback' ),
-            'schedspot_booking_settings'
-        );
-
-        add_settings_section(
-            'schedspot_payment_section',
-            __( 'Payment Settings', 'schedspot' ),
-            array( $this, 'payment_section_callback' ),
-            'schedspot_payment_settings'
-        );
-
-        add_settings_section(
-            'schedspot_geolocation_section',
-            __( 'Geolocation Settings', 'schedspot' ),
-            array( $this, 'geolocation_section_callback' ),
-            'schedspot_geolocation_settings'
-        );
-
-        // Add settings fields
-        $this->add_settings_fields();
-    }
 
     /**
-     * Add settings fields.
+     * Get component instance.
      *
-     * @since 0.1.0
+     * @since 1.6.1
+     * @param string $component Component name.
+     * @return object|null Component instance or null if not found.
      */
-    private function add_settings_fields() {
-        // General settings fields
-        add_settings_field(
-            'schedspot_default_timezone',
-            __( 'Default Timezone', 'schedspot' ),
-            array( $this, 'timezone_field_callback' ),
-            'schedspot_general_settings',
-            'schedspot_general_section'
-        );
-
-        add_settings_field(
-            'schedspot_date_format',
-            __( 'Date Format', 'schedspot' ),
-            array( $this, 'date_format_field_callback' ),
-            'schedspot_general_settings',
-            'schedspot_general_section'
-        );
-
-        add_settings_field(
-            'schedspot_time_format',
-            __( 'Time Format', 'schedspot' ),
-            array( $this, 'time_format_field_callback' ),
-            'schedspot_general_settings',
-            'schedspot_general_section'
-        );
-
-        add_settings_field(
-            'schedspot_currency',
-            __( 'Currency', 'schedspot' ),
-            array( $this, 'currency_field_callback' ),
-            'schedspot_general_settings',
-            'schedspot_general_section'
-        );
-
-        // Booking settings fields
-        add_settings_field(
-            'schedspot_default_slot_length',
-            __( 'Default Slot Length (minutes)', 'schedspot' ),
-            array( $this, 'slot_length_field_callback' ),
-            'schedspot_booking_settings',
-            'schedspot_booking_section'
-        );
-
-        add_settings_field(
-            'schedspot_minimum_notice',
-            __( 'Minimum Notice (hours)', 'schedspot' ),
-            array( $this, 'minimum_notice_field_callback' ),
-            'schedspot_booking_settings',
-            'schedspot_booking_section'
-        );
-
-        add_settings_field(
-            'schedspot_auto_approve_bookings',
-            __( 'Auto-approve Bookings', 'schedspot' ),
-            array( $this, 'auto_approve_field_callback' ),
-            'schedspot_booking_settings',
-            'schedspot_booking_section'
-        );
-
-        // Payment settings fields
-        add_settings_field(
-            'schedspot_system_fee_per_hour',
-            __( 'System Fee per Hour ($)', 'schedspot' ),
-            array( $this, 'system_fee_field_callback' ),
-            'schedspot_payment_settings',
-            'schedspot_payment_section'
-        );
-
-        add_settings_field(
-            'schedspot_commission_rate',
-            __( 'Commission Rate (%)', 'schedspot' ),
-            array( $this, 'commission_rate_field_callback' ),
-            'schedspot_payment_settings',
-            'schedspot_payment_section'
-        );
-
-        add_settings_field(
-            'schedspot_payment_required',
-            __( 'Payment Required', 'schedspot' ),
-            array( $this, 'payment_required_field_callback' ),
-            'schedspot_payment_settings',
-            'schedspot_payment_section'
-        );
-
-        add_settings_field(
-            'schedspot_deposit_rate',
-            __( 'Deposit Rate (%)', 'schedspot' ),
-            array( $this, 'deposit_rate_field_callback' ),
-            'schedspot_payment_settings',
-            'schedspot_payment_section'
-        );
-
-        add_settings_field(
-            'schedspot_enable_payments',
-            __( 'Enable WooCommerce Integration', 'schedspot' ),
-            array( $this, 'enable_payments_field_callback' ),
-            'schedspot_payment_settings',
-            'schedspot_payment_section'
-        );
-
-        // Geolocation settings fields
-        add_settings_field(
-            'schedspot_enable_geofencing',
-            __( 'Enable Geofencing', 'schedspot' ),
-            array( $this, 'enable_geofencing_field_callback' ),
-            'schedspot_geolocation_settings',
-            'schedspot_geolocation_section'
-        );
-
-        add_settings_field(
-            'schedspot_google_maps_api_key',
-            __( 'Google Maps API Key', 'schedspot' ),
-            array( $this, 'google_maps_api_key_field_callback' ),
-            'schedspot_geolocation_settings',
-            'schedspot_geolocation_section'
-        );
-
-        add_settings_field(
-            'schedspot_default_service_radius',
-            __( 'Default Service Radius (km)', 'schedspot' ),
-            array( $this, 'default_service_radius_field_callback' ),
-            'schedspot_geolocation_settings',
-            'schedspot_geolocation_section'
-        );
-
-        add_settings_field(
-            'schedspot_distance_unit',
-            __( 'Distance Unit', 'schedspot' ),
-            array( $this, 'distance_unit_field_callback' ),
-            'schedspot_geolocation_settings',
-            'schedspot_geolocation_section'
-        );
-
-        // Messaging settings fields
-        add_settings_field(
-            'schedspot_enable_messaging',
-            __( 'Enable Messaging', 'schedspot' ),
-            array( $this, 'enable_messaging_field_callback' ),
-            'schedspot_messaging_settings',
-            'schedspot_messaging_section'
-        );
-
-        add_settings_field(
-            'schedspot_allow_file_attachments',
-            __( 'Allow File Attachments', 'schedspot' ),
-            array( $this, 'allow_file_attachments_field_callback' ),
-            'schedspot_messaging_settings',
-            'schedspot_messaging_section'
-        );
-
-        add_settings_field(
-            'schedspot_max_file_size',
-            __( 'Max File Size (MB)', 'schedspot' ),
-            array( $this, 'max_file_size_field_callback' ),
-            'schedspot_messaging_settings',
-            'schedspot_messaging_section'
-        );
-
-        add_settings_field(
-            'schedspot_allowed_file_types',
-            __( 'Allowed File Types', 'schedspot' ),
-            array( $this, 'allowed_file_types_field_callback' ),
-            'schedspot_messaging_settings',
-            'schedspot_messaging_section'
-        );
-
-        add_settings_field(
-            'schedspot_message_retention_days',
-            __( 'Message Retention (Days)', 'schedspot' ),
-            array( $this, 'message_retention_days_field_callback' ),
-            'schedspot_messaging_settings',
-            'schedspot_messaging_section'
-        );
-
-        // Email settings fields
-        add_settings_field(
-            'schedspot_email_notifications_enabled',
-            __( 'Enable Email Notifications', 'schedspot' ),
-            array( $this, 'email_notifications_enabled_field_callback' ),
-            'schedspot_email_settings',
-            'schedspot_email_section'
-        );
-
-        add_settings_field(
-            'schedspot_admin_email',
-            __( 'Admin Email', 'schedspot' ),
-            array( $this, 'admin_email_field_callback' ),
-            'schedspot_email_settings',
-            'schedspot_email_section'
-        );
-
-        add_settings_field(
-            'schedspot_email_from_name',
-            __( 'From Name', 'schedspot' ),
-            array( $this, 'email_from_name_field_callback' ),
-            'schedspot_email_settings',
-            'schedspot_email_section'
-        );
-
-        add_settings_field(
-            'schedspot_email_from_address',
-            __( 'From Address', 'schedspot' ),
-            array( $this, 'email_from_address_field_callback' ),
-            'schedspot_email_settings',
-            'schedspot_email_section'
-        );
-
-        // Advanced settings fields
-        add_settings_field(
-            'schedspot_enable_debug_mode',
-            __( 'Enable Debug Mode', 'schedspot' ),
-            array( $this, 'enable_debug_mode_field_callback' ),
-            'schedspot_advanced_settings',
-            'schedspot_advanced_section'
-        );
-
-        add_settings_field(
-            'schedspot_cache_duration',
-            __( 'Cache Duration (Minutes)', 'schedspot' ),
-            array( $this, 'cache_duration_field_callback' ),
-            'schedspot_advanced_settings',
-            'schedspot_advanced_section'
-        );
-
-        add_settings_field(
-            'schedspot_api_rate_limit',
-            __( 'API Rate Limit (Requests/Hour)', 'schedspot' ),
-            array( $this, 'api_rate_limit_field_callback' ),
-            'schedspot_advanced_settings',
-            'schedspot_advanced_section'
-        );
-
-        add_settings_field(
-            'schedspot_data_retention_days',
-            __( 'Data Retention (Days)', 'schedspot' ),
-            array( $this, 'data_retention_days_field_callback' ),
-            'schedspot_advanced_settings',
-            'schedspot_advanced_section'
-        );
+    public function get_component( $component ) {
+        return isset( $this->components[ $component ] ) ? $this->components[ $component ] : null;
     }
 
     /**
@@ -534,163 +223,7 @@ class SchedSpot_Admin {
         <?php
     }
 
-    /**
-     * Bookings page callback.
-     *
-     * @since 0.1.0
-     */
-    public function bookings_page() {
-        $action = isset( $_GET['action'] ) ? sanitize_text_field( $_GET['action'] ) : '';
-        $booking_id = isset( $_GET['booking_id'] ) ? absint( $_GET['booking_id'] ) : 0;
 
-        // Handle form submissions
-        if ( isset( $_POST['schedspot_booking_action'] ) ) {
-            $this->handle_booking_form_submission();
-        }
-
-        switch ( $action ) {
-            case 'view':
-                $this->render_booking_details( $booking_id );
-                break;
-            case 'edit':
-                $this->render_edit_booking_form( $booking_id );
-                break;
-            case 'delete':
-                $this->handle_delete_booking( $booking_id );
-                break;
-            default:
-                $this->render_bookings_list();
-                break;
-        }
-    }
-
-    /**
-     * Services page callback.
-     *
-     * @since 1.0.0
-     */
-    public function services_page() {
-        $action = isset( $_GET['action'] ) ? sanitize_text_field( $_GET['action'] ) : '';
-        $service_id = isset( $_GET['service_id'] ) ? absint( $_GET['service_id'] ) : 0;
-
-        // Handle form submissions
-        if ( isset( $_POST['schedspot_service_action'] ) ) {
-            $this->handle_service_form_submission();
-        }
-
-        switch ( $action ) {
-            case 'add':
-                $this->render_add_service_form();
-                break;
-            case 'edit':
-                $this->render_edit_service_form( $service_id );
-                break;
-            case 'delete':
-                $this->handle_delete_service( $service_id );
-                break;
-            default:
-                $this->render_services_list();
-                break;
-        }
-    }
-
-    /**
-     * Workers page callback.
-     *
-     * @since 1.0.0
-     */
-    public function workers_page() {
-        $action = isset( $_GET['action'] ) ? sanitize_text_field( $_GET['action'] ) : '';
-        $worker_id = isset( $_GET['worker_id'] ) ? absint( $_GET['worker_id'] ) : 0;
-
-        // Handle form submissions
-        if ( isset( $_POST['schedspot_worker_action'] ) ) {
-            $this->handle_worker_form_submission();
-        }
-
-        switch ( $action ) {
-            case 'add':
-                $this->render_add_worker_form();
-                break;
-            case 'edit':
-                $this->render_edit_worker_form( $worker_id );
-                break;
-            case 'view':
-                $this->render_worker_profile( $worker_id );
-                break;
-            case 'availability':
-                $this->render_worker_availability( $worker_id );
-                break;
-            case 'delete':
-                $this->handle_delete_worker( $worker_id );
-                break;
-            default:
-                $this->render_workers_list();
-                break;
-        }
-    }
-
-    /**
-     * Settings page callback.
-     *
-     * @since 0.1.0
-     */
-    public function settings_page() {
-        $active_tab = isset( $_GET['tab'] ) ? $_GET['tab'] : 'general';
-        ?>
-        <div class="wrap">
-            <h1><?php _e( 'SchedSpot Settings', 'schedspot' ); ?></h1>
-            
-            <h2 class="nav-tab-wrapper">
-                <a href="?page=schedspot-settings&tab=general" class="nav-tab <?php echo $active_tab == 'general' ? 'nav-tab-active' : ''; ?>"><?php _e( 'General', 'schedspot' ); ?></a>
-                <a href="?page=schedspot-settings&tab=booking" class="nav-tab <?php echo $active_tab == 'booking' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Booking', 'schedspot' ); ?></a>
-                <a href="?page=schedspot-settings&tab=payment" class="nav-tab <?php echo $active_tab == 'payment' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Payment', 'schedspot' ); ?></a>
-                <a href="?page=schedspot-settings&tab=calendar" class="nav-tab <?php echo $active_tab == 'calendar' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Calendar', 'schedspot' ); ?></a>
-                <a href="?page=schedspot-settings&tab=sms" class="nav-tab <?php echo $active_tab == 'sms' ? 'nav-tab-active' : ''; ?>"><?php _e( 'SMS', 'schedspot' ); ?></a>
-                <a href="?page=schedspot-settings&tab=messaging" class="nav-tab <?php echo $active_tab == 'messaging' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Messaging', 'schedspot' ); ?></a>
-                <a href="?page=schedspot-settings&tab=email" class="nav-tab <?php echo $active_tab == 'email' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Email', 'schedspot' ); ?></a>
-                <a href="?page=schedspot-settings&tab=geolocation" class="nav-tab <?php echo $active_tab == 'geolocation' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Geolocation', 'schedspot' ); ?></a>
-                <a href="?page=schedspot-settings&tab=advanced" class="nav-tab <?php echo $active_tab == 'advanced' ? 'nav-tab-active' : ''; ?>"><?php _e( 'Advanced', 'schedspot' ); ?></a>
-            </h2>
-            
-            <?php if ( $active_tab == 'calendar' ) : ?>
-                <?php $this->render_calendar_settings(); ?>
-            <?php elseif ( $active_tab == 'sms' ) : ?>
-                <?php $this->render_sms_settings(); ?>
-            <?php elseif ( $active_tab == 'geolocation' ) : ?>
-                <?php $this->render_geolocation_settings(); ?>
-            <?php else : ?>
-                <form method="post" action="options.php">
-                    <?php
-                    if ( $active_tab == 'general' ) {
-                        settings_fields( 'schedspot_general_settings' );
-                        do_settings_sections( 'schedspot_general_settings' );
-                    } elseif ( $active_tab == 'booking' ) {
-                        settings_fields( 'schedspot_booking_settings' );
-                        do_settings_sections( 'schedspot_booking_settings' );
-                    } elseif ( $active_tab == 'payment' ) {
-                        settings_fields( 'schedspot_payment_settings' );
-                        do_settings_sections( 'schedspot_payment_settings' );
-                    } elseif ( $active_tab == 'messaging' ) {
-                        settings_fields( 'schedspot_messaging_settings' );
-                        do_settings_sections( 'schedspot_messaging_settings' );
-                    } elseif ( $active_tab == 'email' ) {
-                        settings_fields( 'schedspot_email_settings' );
-                        do_settings_sections( 'schedspot_email_settings' );
-                    } elseif ( $active_tab == 'geolocation' ) {
-                        settings_fields( 'schedspot_geolocation_settings' );
-                        do_settings_sections( 'schedspot_geolocation_settings' );
-                    } elseif ( $active_tab == 'advanced' ) {
-                        settings_fields( 'schedspot_advanced_settings' );
-                        do_settings_sections( 'schedspot_advanced_settings' );
-                    }
-                    submit_button();
-                    ?>
-                </form>
-            <?php endif; ?>
-        </div>
-        <?php
-    }
 
     /**
      * Role switcher page callback.

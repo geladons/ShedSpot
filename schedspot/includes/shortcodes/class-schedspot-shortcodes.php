@@ -1,9 +1,9 @@
 <?php
 /**
- * Shortcodes Class
+ * SchedSpot Shortcodes
  *
  * @package SchedSpot
- * @version 0.1.0
+ * @version 1.6.1
  */
 
 // Prevent direct access
@@ -15,14 +15,21 @@ if ( ! defined( 'ABSPATH' ) ) {
  * SchedSpot_Shortcodes Class.
  *
  * @class SchedSpot_Shortcodes
- * @version 0.1.0
+ * @version 1.6.1
  */
 class SchedSpot_Shortcodes {
 
     /**
+     * Shortcode component instances.
+     *
+     * @var array
+     */
+    private $components = array();
+
+    /**
      * Constructor.
      *
-     * @since 0.1.0
+     * @since 1.6.1
      */
     public function __construct() {
         $this->init();
@@ -31,26 +38,36 @@ class SchedSpot_Shortcodes {
     /**
      * Initialize shortcodes.
      *
-     * @since 0.1.0
+     * @since 1.6.1
      */
     public function init() {
-        $shortcodes = array(
-            'schedspot_booking_form' => 'booking_form',
-            'schedspot_service_list' => 'service_list',
-            'schedspot_dashboard'    => 'dashboard',
-            'schedspot_messages'     => 'messages',
-            'schedspot_profile'      => 'profile',
-        );
+        // Load shortcode component classes
+        $this->load_components();
 
-        foreach ( $shortcodes as $shortcode => $function ) {
-            add_shortcode( $shortcode, array( $this, $function ) );
-        }
-
-        // Hook to mark pages with shortcodes for navigation
+        // Legacy shortcode support and page management
         add_action( 'save_post', array( $this, 'mark_pages_with_shortcodes' ) );
-
-        // Hook to create missing pages if needed
         add_action( 'init', array( $this, 'maybe_create_missing_pages' ) );
+    }
+
+    /**
+     * Load shortcode component classes.
+     *
+     * @since 1.6.1
+     */
+    private function load_components() {
+        // Include component files
+        require_once SCHEDSPOT_INCLUDES_DIR . 'shortcodes/class-schedspot-booking-form.php';
+        require_once SCHEDSPOT_INCLUDES_DIR . 'shortcodes/class-schedspot-dashboard.php';
+        require_once SCHEDSPOT_INCLUDES_DIR . 'shortcodes/class-schedspot-messages.php';
+        require_once SCHEDSPOT_INCLUDES_DIR . 'shortcodes/class-schedspot-profile.php';
+        require_once SCHEDSPOT_INCLUDES_DIR . 'shortcodes/class-schedspot-service-list.php';
+
+        // Initialize components
+        $this->components['booking_form'] = new SchedSpot_Booking_Form();
+        $this->components['dashboard'] = new SchedSpot_Dashboard();
+        $this->components['messages'] = new SchedSpot_Messages();
+        $this->components['profile'] = new SchedSpot_Profile();
+        $this->components['service_list'] = new SchedSpot_Service_List();
     }
 
     /**
@@ -96,28 +113,15 @@ class SchedSpot_Shortcodes {
     }
 
     /**
-     * Booking form shortcode.
+     * Get component instance.
      *
-     * @since 0.1.0
-     * @param array $atts Shortcode attributes.
-     * @return string HTML output.
+     * @since 1.6.1
+     * @param string $component Component name.
+     * @return object|null Component instance or null if not found.
      */
-    public function booking_form( $atts ) {
-        $atts = shortcode_atts( array(
-            'service_id' => 0,
-            'worker_id'  => 0,
-            'class'      => 'schedspot-booking-form',
-        ), $atts, 'schedspot_booking_form' );
-
-        ob_start();
-
-        // Enqueue necessary scripts and styles
-        $this->enqueue_booking_assets();
-
-        // Handle form submission
-        if ( isset( $_POST['schedspot_submit_booking'] ) && wp_verify_nonce( $_POST['schedspot_booking_nonce'], 'schedspot_booking_form' ) ) {
-            $this->handle_booking_submission();
-        }
+    public function get_component( $component ) {
+        return isset( $this->components[ $component ] ) ? $this->components[ $component ] : null;
+    }
 
         ?>
         <div class="<?php echo esc_attr( $atts['class'] ); ?>">

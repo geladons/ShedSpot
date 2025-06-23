@@ -3,7 +3,7 @@
  * Plugin Name: SchedSpot
  * Plugin URI: https://schedspot.com
  * Description: A comprehensive WordPress service booking and marketplace plugin combining appointment scheduling with a multi-vendor marketplace.
- * Version: 1.0.0
+ * Version: 1.6.1
  * Author: SchedSpot Team
  * Author URI: https://schedspot.com
  * License: GPL v2 or later
@@ -16,7 +16,7 @@
  * Network: false
  *
  * @package SchedSpot
- * @version 1.0.0
+ * @version 1.6.1
  */
 
 // Prevent direct access
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'SCHEDSPOT_VERSION', '1.0.0' );
+define( 'SCHEDSPOT_VERSION', '1.6.1' );
 define( 'SCHEDSPOT_PLUGIN_FILE', __FILE__ );
 define( 'SCHEDSPOT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SCHEDSPOT_PLUGIN_URL', plugins_url( '/', __FILE__ ) );
