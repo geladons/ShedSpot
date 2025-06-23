@@ -184,6 +184,27 @@ class SchedSpot_Admin {
         );
 
         add_settings_section(
+            'schedspot_messaging_section',
+            __( 'Messaging Settings', 'schedspot' ),
+            array( $this, 'messaging_section_callback' ),
+            'schedspot_messaging_settings'
+        );
+
+        add_settings_section(
+            'schedspot_email_section',
+            __( 'Email Settings', 'schedspot' ),
+            array( $this, 'email_section_callback' ),
+            'schedspot_email_settings'
+        );
+
+        add_settings_section(
+            'schedspot_advanced_section',
+            __( 'Advanced Settings', 'schedspot' ),
+            array( $this, 'advanced_section_callback' ),
+            'schedspot_advanced_settings'
+        );
+
+        add_settings_section(
             'schedspot_booking_section',
             __( 'Booking Settings', 'schedspot' ),
             array( $this, 'booking_section_callback' ),
@@ -345,6 +366,113 @@ class SchedSpot_Admin {
             'schedspot_geolocation_settings',
             'schedspot_geolocation_section'
         );
+
+        // Messaging settings fields
+        add_settings_field(
+            'schedspot_enable_messaging',
+            __( 'Enable Messaging', 'schedspot' ),
+            array( $this, 'enable_messaging_field_callback' ),
+            'schedspot_messaging_settings',
+            'schedspot_messaging_section'
+        );
+
+        add_settings_field(
+            'schedspot_allow_file_attachments',
+            __( 'Allow File Attachments', 'schedspot' ),
+            array( $this, 'allow_file_attachments_field_callback' ),
+            'schedspot_messaging_settings',
+            'schedspot_messaging_section'
+        );
+
+        add_settings_field(
+            'schedspot_max_file_size',
+            __( 'Max File Size (MB)', 'schedspot' ),
+            array( $this, 'max_file_size_field_callback' ),
+            'schedspot_messaging_settings',
+            'schedspot_messaging_section'
+        );
+
+        add_settings_field(
+            'schedspot_allowed_file_types',
+            __( 'Allowed File Types', 'schedspot' ),
+            array( $this, 'allowed_file_types_field_callback' ),
+            'schedspot_messaging_settings',
+            'schedspot_messaging_section'
+        );
+
+        add_settings_field(
+            'schedspot_message_retention_days',
+            __( 'Message Retention (Days)', 'schedspot' ),
+            array( $this, 'message_retention_days_field_callback' ),
+            'schedspot_messaging_settings',
+            'schedspot_messaging_section'
+        );
+
+        // Email settings fields
+        add_settings_field(
+            'schedspot_email_notifications_enabled',
+            __( 'Enable Email Notifications', 'schedspot' ),
+            array( $this, 'email_notifications_enabled_field_callback' ),
+            'schedspot_email_settings',
+            'schedspot_email_section'
+        );
+
+        add_settings_field(
+            'schedspot_admin_email',
+            __( 'Admin Email', 'schedspot' ),
+            array( $this, 'admin_email_field_callback' ),
+            'schedspot_email_settings',
+            'schedspot_email_section'
+        );
+
+        add_settings_field(
+            'schedspot_email_from_name',
+            __( 'From Name', 'schedspot' ),
+            array( $this, 'email_from_name_field_callback' ),
+            'schedspot_email_settings',
+            'schedspot_email_section'
+        );
+
+        add_settings_field(
+            'schedspot_email_from_address',
+            __( 'From Address', 'schedspot' ),
+            array( $this, 'email_from_address_field_callback' ),
+            'schedspot_email_settings',
+            'schedspot_email_section'
+        );
+
+        // Advanced settings fields
+        add_settings_field(
+            'schedspot_enable_debug_mode',
+            __( 'Enable Debug Mode', 'schedspot' ),
+            array( $this, 'enable_debug_mode_field_callback' ),
+            'schedspot_advanced_settings',
+            'schedspot_advanced_section'
+        );
+
+        add_settings_field(
+            'schedspot_cache_duration',
+            __( 'Cache Duration (Minutes)', 'schedspot' ),
+            array( $this, 'cache_duration_field_callback' ),
+            'schedspot_advanced_settings',
+            'schedspot_advanced_section'
+        );
+
+        add_settings_field(
+            'schedspot_api_rate_limit',
+            __( 'API Rate Limit (Requests/Hour)', 'schedspot' ),
+            array( $this, 'api_rate_limit_field_callback' ),
+            'schedspot_advanced_settings',
+            'schedspot_advanced_section'
+        );
+
+        add_settings_field(
+            'schedspot_data_retention_days',
+            __( 'Data Retention (Days)', 'schedspot' ),
+            array( $this, 'data_retention_days_field_callback' ),
+            'schedspot_advanced_settings',
+            'schedspot_advanced_section'
+        );
     }
 
     /**
@@ -412,13 +540,28 @@ class SchedSpot_Admin {
      * @since 0.1.0
      */
     public function bookings_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e( 'Bookings', 'schedspot' ); ?></h1>
-            
-            <?php $this->render_bookings_list(); ?>
-        </div>
-        <?php
+        $action = isset( $_GET['action'] ) ? sanitize_text_field( $_GET['action'] ) : '';
+        $booking_id = isset( $_GET['booking_id'] ) ? absint( $_GET['booking_id'] ) : 0;
+
+        // Handle form submissions
+        if ( isset( $_POST['schedspot_booking_action'] ) ) {
+            $this->handle_booking_form_submission();
+        }
+
+        switch ( $action ) {
+            case 'view':
+                $this->render_booking_details( $booking_id );
+                break;
+            case 'edit':
+                $this->render_edit_booking_form( $booking_id );
+                break;
+            case 'delete':
+                $this->handle_delete_booking( $booking_id );
+                break;
+            default:
+                $this->render_bookings_list();
+                break;
+        }
     }
 
     /**
@@ -478,6 +621,9 @@ class SchedSpot_Admin {
             case 'availability':
                 $this->render_worker_availability( $worker_id );
                 break;
+            case 'delete':
+                $this->handle_delete_worker( $worker_id );
+                break;
             default:
                 $this->render_workers_list();
                 break;
@@ -525,9 +671,18 @@ class SchedSpot_Admin {
                     } elseif ( $active_tab == 'payment' ) {
                         settings_fields( 'schedspot_payment_settings' );
                         do_settings_sections( 'schedspot_payment_settings' );
+                    } elseif ( $active_tab == 'messaging' ) {
+                        settings_fields( 'schedspot_messaging_settings' );
+                        do_settings_sections( 'schedspot_messaging_settings' );
+                    } elseif ( $active_tab == 'email' ) {
+                        settings_fields( 'schedspot_email_settings' );
+                        do_settings_sections( 'schedspot_email_settings' );
                     } elseif ( $active_tab == 'geolocation' ) {
                         settings_fields( 'schedspot_geolocation_settings' );
                         do_settings_sections( 'schedspot_geolocation_settings' );
+                    } elseif ( $active_tab == 'advanced' ) {
+                        settings_fields( 'schedspot_advanced_settings' );
+                        do_settings_sections( 'schedspot_advanced_settings' );
                     }
                     submit_button();
                     ?>
@@ -930,6 +1085,7 @@ class SchedSpot_Admin {
                     <th><?php _e( 'Time', 'schedspot' ); ?></th>
                     <th><?php _e( 'Status', 'schedspot' ); ?></th>
                     <th><?php _e( 'Total', 'schedspot' ); ?></th>
+                    <th><?php _e( 'Actions', 'schedspot' ); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -943,16 +1099,419 @@ class SchedSpot_Admin {
                             <td><?php echo esc_html( date( 'g:i A', strtotime( $booking->start_time ) ) ); ?></td>
                             <td><?php echo esc_html( ucfirst( $booking->status ) ); ?></td>
                             <td>$<?php echo esc_html( number_format( $booking->total_cost, 2 ) ); ?></td>
+                            <td>
+                                <a href="<?php echo admin_url( 'admin.php?page=schedspot-bookings&action=view&booking_id=' . $booking->id ); ?>" class="button button-small"><?php _e( 'View', 'schedspot' ); ?></a>
+                                <a href="<?php echo admin_url( 'admin.php?page=schedspot-bookings&action=edit&booking_id=' . $booking->id ); ?>" class="button button-small"><?php _e( 'Edit', 'schedspot' ); ?></a>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else : ?>
                     <tr>
-                        <td colspan="7"><?php _e( 'No bookings found.', 'schedspot' ); ?></td>
+                        <td colspan="8"><?php _e( 'No bookings found.', 'schedspot' ); ?></td>
                     </tr>
                 <?php endif; ?>
             </tbody>
         </table>
         <?php
+    }
+
+    /**
+     * Render detailed booking view.
+     *
+     * @since 1.0.0
+     * @param int $booking_id Booking ID.
+     */
+    private function render_booking_details( $booking_id ) {
+        $booking = new SchedSpot_Booking( $booking_id );
+
+        if ( ! $booking->id ) {
+            echo '<div class="notice notice-error"><p>' . __( 'Booking not found.', 'schedspot' ) . '</p></div>';
+            return;
+        }
+
+        $customer = get_userdata( $booking->user_id );
+        $worker = get_userdata( $booking->worker_id );
+
+        ?>
+        <div class="wrap">
+            <h1><?php printf( __( 'Booking #%d Details', 'schedspot' ), $booking->id ); ?></h1>
+
+            <a href="<?php echo admin_url( 'admin.php?page=schedspot-bookings' ); ?>" class="button"><?php _e( '← Back to Bookings', 'schedspot' ); ?></a>
+
+            <div class="schedspot-booking-details">
+                <div class="booking-info-grid">
+                    <!-- Basic Information -->
+                    <div class="booking-section">
+                        <h3><?php _e( 'Booking Information', 'schedspot' ); ?></h3>
+                        <table class="form-table">
+                            <tr>
+                                <th><?php _e( 'Booking ID', 'schedspot' ); ?></th>
+                                <td><?php echo esc_html( $booking->id ); ?></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Status', 'schedspot' ); ?></th>
+                                <td><span class="status-badge status-<?php echo esc_attr( $booking->status ); ?>"><?php echo esc_html( ucfirst( $booking->status ) ); ?></span></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Service', 'schedspot' ); ?></th>
+                                <td><?php echo esc_html( $booking->service_name ?: __( 'General Service', 'schedspot' ) ); ?></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Date & Time', 'schedspot' ); ?></th>
+                                <td><?php echo esc_html( date( 'F j, Y g:i A', strtotime( $booking->booking_date . ' ' . $booking->start_time ) ) ); ?></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Duration', 'schedspot' ); ?></th>
+                                <td><?php echo esc_html( $booking->duration ); ?> <?php _e( 'minutes', 'schedspot' ); ?></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Total Cost', 'schedspot' ); ?></th>
+                                <td><strong>$<?php echo esc_html( number_format( $booking->total_cost, 2 ) ); ?></strong></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Created', 'schedspot' ); ?></th>
+                                <td><?php echo esc_html( date( 'F j, Y g:i A', strtotime( $booking->created_at ) ) ); ?></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Customer Information -->
+                    <div class="booking-section">
+                        <h3><?php _e( 'Customer Information', 'schedspot' ); ?></h3>
+                        <table class="form-table">
+                            <tr>
+                                <th><?php _e( 'Name', 'schedspot' ); ?></th>
+                                <td><?php echo esc_html( $customer->display_name ); ?></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Email', 'schedspot' ); ?></th>
+                                <td><a href="mailto:<?php echo esc_attr( $customer->user_email ); ?>"><?php echo esc_html( $customer->user_email ); ?></a></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Phone', 'schedspot' ); ?></th>
+                                <td><?php echo esc_html( $booking->client_details['phone'] ?? __( 'Not provided', 'schedspot' ) ); ?></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Address', 'schedspot' ); ?></th>
+                                <td><?php echo esc_html( $booking->client_details['address'] ?? __( 'Not provided', 'schedspot' ) ); ?></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Worker Information -->
+                    <div class="booking-section">
+                        <h3><?php _e( 'Worker Information', 'schedspot' ); ?></h3>
+                        <table class="form-table">
+                            <tr>
+                                <th><?php _e( 'Name', 'schedspot' ); ?></th>
+                                <td><?php echo esc_html( $worker->display_name ); ?></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Email', 'schedspot' ); ?></th>
+                                <td><a href="mailto:<?php echo esc_attr( $worker->user_email ); ?>"><?php echo esc_html( $worker->user_email ); ?></a></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Profile', 'schedspot' ); ?></th>
+                                <td><a href="<?php echo admin_url( 'admin.php?page=schedspot-workers&action=view&worker_id=' . $worker->ID ); ?>" class="button button-small"><?php _e( 'View Profile', 'schedspot' ); ?></a></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Payment Information -->
+                    <div class="booking-section">
+                        <h3><?php _e( 'Payment Information', 'schedspot' ); ?></h3>
+                        <?php
+                        $payment_status = get_post_meta( $booking->id, 'schedspot_payment_status', true ) ?: 'pending';
+                        $wc_order_id = get_post_meta( $booking->id, 'schedspot_wc_order_id', true );
+                        ?>
+                        <table class="form-table">
+                            <tr>
+                                <th><?php _e( 'Payment Status', 'schedspot' ); ?></th>
+                                <td><span class="payment-status payment-<?php echo esc_attr( $payment_status ); ?>"><?php echo esc_html( ucfirst( $payment_status ) ); ?></span></td>
+                            </tr>
+                            <tr>
+                                <th><?php _e( 'Total Amount', 'schedspot' ); ?></th>
+                                <td>$<?php echo esc_html( number_format( $booking->total_cost, 2 ) ); ?></td>
+                            </tr>
+                            <?php if ( $wc_order_id ) : ?>
+                            <tr>
+                                <th><?php _e( 'WooCommerce Order', 'schedspot' ); ?></th>
+                                <td><a href="<?php echo admin_url( 'post.php?post=' . $wc_order_id . '&action=edit' ); ?>" target="_blank">#<?php echo esc_html( $wc_order_id ); ?></a></td>
+                            </tr>
+                            <?php endif; ?>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Messages Section -->
+                <div class="booking-section full-width">
+                    <h3><?php _e( 'Messages', 'schedspot' ); ?></h3>
+                    <?php $this->render_booking_messages( $booking->id ); ?>
+                </div>
+
+                <!-- Booking Timeline -->
+                <div class="booking-section full-width">
+                    <h3><?php _e( 'Booking Timeline', 'schedspot' ); ?></h3>
+                    <?php $this->render_booking_timeline( $booking->id ); ?>
+                </div>
+
+                <!-- Actions -->
+                <div class="booking-actions">
+                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-bookings&action=edit&booking_id=' . $booking->id ); ?>" class="button button-primary"><?php _e( 'Edit Booking', 'schedspot' ); ?></a>
+                    <?php if ( $booking->status === 'pending' ) : ?>
+                        <button type="button" class="button" onclick="updateBookingStatus(<?php echo $booking->id; ?>, 'confirmed')"><?php _e( 'Confirm Booking', 'schedspot' ); ?></button>
+                    <?php endif; ?>
+                    <?php if ( in_array( $booking->status, array( 'pending', 'confirmed' ) ) ) : ?>
+                        <button type="button" class="button" onclick="updateBookingStatus(<?php echo $booking->id; ?>, 'cancelled')"><?php _e( 'Cancel Booking', 'schedspot' ); ?></button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        .booking-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .booking-section {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+        }
+        .booking-section.full-width {
+            grid-column: 1 / -1;
+        }
+        .booking-section h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-confirmed { background: #d4edda; color: #155724; }
+        .status-completed { background: #d1ecf1; color: #0c5460; }
+        .status-cancelled { background: #f8d7da; color: #721c24; }
+        .payment-status {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .payment-pending { background: #fff3cd; color: #856404; }
+        .payment-paid { background: #d4edda; color: #155724; }
+        .payment-failed { background: #f8d7da; color: #721c24; }
+        .booking-actions {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .booking-actions .button {
+            margin-right: 10px;
+        }
+        </style>
+
+        <script>
+        function updateBookingStatus(bookingId, status) {
+            if (confirm('<?php _e( 'Are you sure you want to update this booking status?', 'schedspot' ); ?>')) {
+                jQuery.post(ajaxurl, {
+                    action: 'schedspot_update_booking_status',
+                    booking_id: bookingId,
+                    status: status,
+                    nonce: '<?php echo wp_create_nonce( 'schedspot_booking_status' ); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('<?php _e( 'Error updating booking status.', 'schedspot' ); ?>');
+                    }
+                });
+            }
+        }
+        </script>
+        <?php
+    }
+
+    /**
+     * Render booking messages.
+     *
+     * @since 1.0.0
+     * @param int $booking_id Booking ID.
+     */
+    private function render_booking_messages( $booking_id ) {
+        $booking = new SchedSpot_Booking( $booking_id );
+        $messages = SchedSpot_Message::get_conversation( $booking->user_id, $booking->worker_id, array( 'booking_id' => $booking_id ) );
+
+        if ( empty( $messages ) ) {
+            echo '<p>' . __( 'No messages found for this booking.', 'schedspot' ) . '</p>';
+            return;
+        }
+
+        echo '<div class="booking-messages">';
+        foreach ( $messages as $message ) {
+            $sender = get_userdata( $message->sender_id );
+            $is_worker = $message->sender_id == $booking->worker_id;
+
+            echo '<div class="message-item ' . ( $is_worker ? 'worker-message' : 'customer-message' ) . '">';
+            echo '<div class="message-header">';
+            echo '<strong>' . esc_html( $sender->display_name ) . '</strong>';
+            echo '<span class="message-time">' . esc_html( date( 'M j, Y g:i A', strtotime( $message->created_at ) ) ) . '</span>';
+            echo '</div>';
+            echo '<div class="message-content">' . wp_kses_post( $message->content ) . '</div>';
+            echo '</div>';
+        }
+        echo '</div>';
+
+        echo '<style>
+        .booking-messages {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        .message-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .worker-message {
+            background: #e3f2fd;
+            margin-left: 20px;
+        }
+        .customer-message {
+            background: #f3e5f5;
+            margin-right: 20px;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        .message-time {
+            color: #666;
+        }
+        .message-content {
+            line-height: 1.4;
+        }
+        </style>';
+    }
+
+    /**
+     * Render booking timeline.
+     *
+     * @since 1.0.0
+     * @param int $booking_id Booking ID.
+     */
+    private function render_booking_timeline( $booking_id ) {
+        $booking = new SchedSpot_Booking( $booking_id );
+
+        // Get booking status changes from meta or logs
+        $timeline_events = array(
+            array(
+                'date' => $booking->created_at,
+                'event' => __( 'Booking Created', 'schedspot' ),
+                'description' => __( 'Customer submitted booking request', 'schedspot' ),
+                'status' => 'created'
+            )
+        );
+
+        // Add status change events if available
+        $status_changes = get_post_meta( $booking_id, 'schedspot_status_changes', true );
+        if ( is_array( $status_changes ) ) {
+            foreach ( $status_changes as $change ) {
+                $timeline_events[] = array(
+                    'date' => $change['date'],
+                    'event' => sprintf( __( 'Status changed to %s', 'schedspot' ), ucfirst( $change['status'] ) ),
+                    'description' => $change['note'] ?? '',
+                    'status' => $change['status']
+                );
+            }
+        }
+
+        // Sort by date
+        usort( $timeline_events, function( $a, $b ) {
+            return strtotime( $a['date'] ) - strtotime( $b['date'] );
+        } );
+
+        echo '<div class="booking-timeline">';
+        foreach ( $timeline_events as $event ) {
+            echo '<div class="timeline-item">';
+            echo '<div class="timeline-marker status-' . esc_attr( $event['status'] ) . '"></div>';
+            echo '<div class="timeline-content">';
+            echo '<div class="timeline-header">';
+            echo '<strong>' . esc_html( $event['event'] ) . '</strong>';
+            echo '<span class="timeline-date">' . esc_html( date( 'M j, Y g:i A', strtotime( $event['date'] ) ) ) . '</span>';
+            echo '</div>';
+            if ( ! empty( $event['description'] ) ) {
+                echo '<div class="timeline-description">' . esc_html( $event['description'] ) . '</div>';
+            }
+            echo '</div>';
+            echo '</div>';
+        }
+        echo '</div>';
+
+        echo '<style>
+        .booking-timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        .booking-timeline::before {
+            content: "";
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #ddd;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .timeline-marker {
+            position: absolute;
+            left: -25px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            background: #ddd;
+        }
+        .timeline-marker.status-created { background: #007cba; }
+        .timeline-marker.status-confirmed { background: #46b450; }
+        .timeline-marker.status-completed { background: #00a0d2; }
+        .timeline-marker.status-cancelled { background: #dc3232; }
+        .timeline-content {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid #ddd;
+        }
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .timeline-date {
+            color: #666;
+            font-size: 12px;
+        }
+        .timeline-description {
+            color: #666;
+            font-size: 14px;
+        }
+        </style>';
     }
 
     /**
@@ -1029,6 +1588,7 @@ class SchedSpot_Admin {
                                     <a href="<?php echo admin_url( 'admin.php?page=schedspot-workers&action=view&worker_id=' . $worker->id ); ?>" class="button button-small"><?php _e( 'View', 'schedspot' ); ?></a>
                                     <a href="<?php echo admin_url( 'admin.php?page=schedspot-workers&action=edit&worker_id=' . $worker->id ); ?>" class="button button-small"><?php _e( 'Edit', 'schedspot' ); ?></a>
                                     <a href="<?php echo admin_url( 'admin.php?page=schedspot-workers&action=availability&worker_id=' . $worker->id ); ?>" class="button button-small"><?php _e( 'Schedule', 'schedspot' ); ?></a>
+                                    <a href="<?php echo wp_nonce_url( admin_url( 'admin.php?page=schedspot-workers&action=delete&worker_id=' . $worker->id ), 'delete_worker_' . $worker->id ); ?>" class="button button-small button-link-delete" onclick="return confirm('<?php _e( 'Are you sure you want to delete this worker? This action cannot be undone.', 'schedspot' ); ?>')"><?php _e( 'Delete', 'schedspot' ); ?></a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1620,7 +2180,7 @@ class SchedSpot_Admin {
                     <tr>
                         <th scope="row"><label for="skills"><?php _e( 'Skills', 'schedspot' ); ?></label></th>
                         <td>
-                            <input type="text" id="skills" name="skills" class="regular-text" value="<?php echo esc_attr( implode( ', ', $worker->profile['skills'] ) ); ?>">
+                            <input type="text" id="skills" name="skills" class="regular-text" value="<?php echo esc_attr( is_array( $worker->profile['skills'] ) ? implode( ', ', $worker->profile['skills'] ) : $worker->profile['skills'] ); ?>">
                             <p class="description"><?php _e( 'Separate skills with commas.', 'schedspot' ); ?></p>
                         </td>
                     </tr>
@@ -1643,21 +2203,21 @@ class SchedSpot_Admin {
                     <tr>
                         <th scope="row"><label for="certifications"><?php _e( 'Certifications', 'schedspot' ); ?></label></th>
                         <td>
-                            <input type="text" id="certifications" name="certifications" class="regular-text" value="<?php echo esc_attr( implode( ', ', $worker->profile['certifications'] ) ); ?>">
+                            <input type="text" id="certifications" name="certifications" class="regular-text" value="<?php echo esc_attr( is_array( $worker->profile['certifications'] ) ? implode( ', ', $worker->profile['certifications'] ) : $worker->profile['certifications'] ); ?>">
                             <p class="description"><?php _e( 'Separate certifications with commas.', 'schedspot' ); ?></p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="languages"><?php _e( 'Languages', 'schedspot' ); ?></label></th>
                         <td>
-                            <input type="text" id="languages" name="languages" class="regular-text" value="<?php echo esc_attr( implode( ', ', $worker->profile['languages'] ) ); ?>">
+                            <input type="text" id="languages" name="languages" class="regular-text" value="<?php echo esc_attr( is_array( $worker->profile['languages'] ) ? implode( ', ', $worker->profile['languages'] ) : $worker->profile['languages'] ); ?>">
                             <p class="description"><?php _e( 'Separate languages with commas.', 'schedspot' ); ?></p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="service_areas"><?php _e( 'Service Areas', 'schedspot' ); ?></label></th>
                         <td>
-                            <input type="text" id="service_areas" name="service_areas" class="regular-text" value="<?php echo esc_attr( implode( ', ', $worker->profile['service_areas'] ) ); ?>">
+                            <input type="text" id="service_areas" name="service_areas" class="regular-text" value="<?php echo esc_attr( is_array( $worker->profile['service_areas'] ) ? implode( ', ', $worker->profile['service_areas'] ) : $worker->profile['service_areas'] ); ?>">
                             <p class="description"><?php _e( 'Areas where this worker provides services. Separate with commas.', 'schedspot' ); ?></p>
                         </td>
                     </tr>
@@ -2585,5 +3145,211 @@ class SchedSpot_Admin {
         </script>
         <?php endif; ?>
         <?php
+    }
+
+    // Section callbacks
+    public function messaging_section_callback() {
+        echo '<p>' . __( 'Configure messaging system settings for client-worker communication.', 'schedspot' ) . '</p>';
+    }
+
+    public function email_section_callback() {
+        echo '<p>' . __( 'Configure email notification settings and templates.', 'schedspot' ) . '</p>';
+    }
+
+    public function advanced_section_callback() {
+        echo '<p>' . __( 'Advanced system settings for debugging, caching, and data management.', 'schedspot' ) . '</p>';
+    }
+
+    // Messaging settings field callbacks
+    public function enable_messaging_field_callback() {
+        $value = get_option( 'schedspot_enable_messaging', true );
+        echo '<input type="checkbox" name="schedspot_enable_messaging" value="1"' . checked( $value, 1, false ) . ' />';
+        echo '<label>' . __( 'Enable messaging between clients and workers', 'schedspot' ) . '</label>';
+    }
+
+    public function allow_file_attachments_field_callback() {
+        $value = get_option( 'schedspot_allow_file_attachments', true );
+        echo '<input type="checkbox" name="schedspot_allow_file_attachments" value="1"' . checked( $value, 1, false ) . ' />';
+        echo '<label>' . __( 'Allow file attachments in messages', 'schedspot' ) . '</label>';
+    }
+
+    public function max_file_size_field_callback() {
+        $value = get_option( 'schedspot_max_file_size', 5 );
+        echo '<input type="number" name="schedspot_max_file_size" value="' . esc_attr( $value ) . '" min="1" max="50" />';
+        echo '<p class="description">' . __( 'Maximum file size in megabytes.', 'schedspot' ) . '</p>';
+    }
+
+    public function allowed_file_types_field_callback() {
+        $value = get_option( 'schedspot_allowed_file_types', 'jpg,jpeg,png,gif,pdf,doc,docx' );
+        echo '<input type="text" name="schedspot_allowed_file_types" value="' . esc_attr( $value ) . '" class="regular-text" />';
+        echo '<p class="description">' . __( 'Comma-separated list of allowed file extensions.', 'schedspot' ) . '</p>';
+    }
+
+    public function message_retention_days_field_callback() {
+        $value = get_option( 'schedspot_message_retention_days', 365 );
+        echo '<input type="number" name="schedspot_message_retention_days" value="' . esc_attr( $value ) . '" min="30" max="3650" />';
+        echo '<p class="description">' . __( 'Number of days to keep messages before automatic deletion.', 'schedspot' ) . '</p>';
+    }
+
+    // Email settings field callbacks
+    public function email_notifications_enabled_field_callback() {
+        $value = get_option( 'schedspot_email_notifications_enabled', true );
+        echo '<input type="checkbox" name="schedspot_email_notifications_enabled" value="1"' . checked( $value, 1, false ) . ' />';
+        echo '<label>' . __( 'Enable email notifications for bookings and messages', 'schedspot' ) . '</label>';
+    }
+
+    public function admin_email_field_callback() {
+        $value = get_option( 'schedspot_admin_email', get_option( 'admin_email' ) );
+        echo '<input type="email" name="schedspot_admin_email" value="' . esc_attr( $value ) . '" class="regular-text" />';
+        echo '<p class="description">' . __( 'Email address for admin notifications.', 'schedspot' ) . '</p>';
+    }
+
+    public function email_from_name_field_callback() {
+        $value = get_option( 'schedspot_email_from_name', get_bloginfo( 'name' ) );
+        echo '<input type="text" name="schedspot_email_from_name" value="' . esc_attr( $value ) . '" class="regular-text" />';
+        echo '<p class="description">' . __( 'Name to appear in the "From" field of emails.', 'schedspot' ) . '</p>';
+    }
+
+    public function email_from_address_field_callback() {
+        $value = get_option( 'schedspot_email_from_address', get_option( 'admin_email' ) );
+        echo '<input type="email" name="schedspot_email_from_address" value="' . esc_attr( $value ) . '" class="regular-text" />';
+        echo '<p class="description">' . __( 'Email address to appear in the "From" field of emails.', 'schedspot' ) . '</p>';
+    }
+
+    // Advanced settings field callbacks
+    public function enable_debug_mode_field_callback() {
+        $value = get_option( 'schedspot_enable_debug_mode', false );
+        echo '<input type="checkbox" name="schedspot_enable_debug_mode" value="1"' . checked( $value, 1, false ) . ' />';
+        echo '<label>' . __( 'Enable debug mode for troubleshooting', 'schedspot' ) . '</label>';
+        echo '<p class="description">' . __( 'Enables detailed logging and error reporting.', 'schedspot' ) . '</p>';
+    }
+
+    public function cache_duration_field_callback() {
+        $value = get_option( 'schedspot_cache_duration', 60 );
+        echo '<input type="number" name="schedspot_cache_duration" value="' . esc_attr( $value ) . '" min="5" max="1440" />';
+        echo '<p class="description">' . __( 'Cache duration in minutes for API responses and data.', 'schedspot' ) . '</p>';
+    }
+
+    public function api_rate_limit_field_callback() {
+        $value = get_option( 'schedspot_api_rate_limit', 1000 );
+        echo '<input type="number" name="schedspot_api_rate_limit" value="' . esc_attr( $value ) . '" min="100" max="10000" />';
+        echo '<p class="description">' . __( 'Maximum API requests per hour per user.', 'schedspot' ) . '</p>';
+    }
+
+    public function data_retention_days_field_callback() {
+        $value = get_option( 'schedspot_data_retention_days', 1095 );
+        echo '<input type="number" name="schedspot_data_retention_days" value="' . esc_attr( $value ) . '" min="90" max="3650" />';
+        echo '<p class="description">' . __( 'Number of days to keep booking and user data before cleanup.', 'schedspot' ) . '</p>';
+    }
+
+    /**
+     * Handle worker deletion with data cleanup.
+     *
+     * @since 1.0.0
+     * @param int $worker_id Worker ID.
+     */
+    private function handle_delete_worker( $worker_id ) {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( __( 'You do not have permission to delete workers.', 'schedspot' ) );
+        }
+
+        // Verify nonce
+        if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( $_GET['_wpnonce'], 'delete_worker_' . $worker_id ) ) {
+            wp_die( __( 'Security check failed.', 'schedspot' ) );
+        }
+
+        $worker = get_userdata( $worker_id );
+        if ( ! $worker || ! in_array( 'schedspot_worker', $worker->roles ) ) {
+            echo '<div class="notice notice-error"><p>' . __( 'Worker not found.', 'schedspot' ) . '</p></div>';
+            $this->render_workers_list();
+            return;
+        }
+
+        // Check for active bookings
+        global $wpdb;
+        $active_bookings = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings
+             WHERE worker_id = %d AND status IN ('pending', 'confirmed')",
+            $worker_id
+        ) );
+
+        if ( $active_bookings > 0 ) {
+            echo '<div class="notice notice-error"><p>' .
+                 sprintf( __( 'Cannot delete worker. They have %d active booking(s). Please complete or cancel these bookings first.', 'schedspot' ), $active_bookings ) .
+                 '</p></div>';
+            $this->render_workers_list();
+            return;
+        }
+
+        // Perform cleanup
+        $this->cleanup_worker_data( $worker_id );
+
+        // Delete the user
+        if ( wp_delete_user( $worker_id ) ) {
+            echo '<div class="notice notice-success"><p>' .
+                 sprintf( __( 'Worker "%s" has been successfully deleted along with all associated data.', 'schedspot' ), $worker->display_name ) .
+                 '</p></div>';
+        } else {
+            echo '<div class="notice notice-error"><p>' . __( 'Error deleting worker.', 'schedspot' ) . '</p></div>';
+        }
+
+        $this->render_workers_list();
+    }
+
+    /**
+     * Cleanup worker data before deletion.
+     *
+     * @since 1.0.0
+     * @param int $worker_id Worker ID.
+     */
+    private function cleanup_worker_data( $worker_id ) {
+        global $wpdb;
+
+        // Delete worker services
+        $wpdb->delete(
+            $wpdb->prefix . 'schedspot_worker_services',
+            array( 'worker_id' => $worker_id ),
+            array( '%d' )
+        );
+
+        // Delete worker availability
+        $wpdb->delete(
+            $wpdb->prefix . 'schedspot_worker_availability',
+            array( 'worker_id' => $worker_id ),
+            array( '%d' )
+        );
+
+        // Delete service areas
+        $wpdb->delete(
+            $wpdb->prefix . 'schedspot_service_areas',
+            array( 'worker_id' => $worker_id ),
+            array( '%d' )
+        );
+
+        // Delete messages (sent and received)
+        $wpdb->delete(
+            $wpdb->prefix . 'schedspot_messages',
+            array( 'sender_id' => $worker_id ),
+            array( '%d' )
+        );
+        $wpdb->delete(
+            $wpdb->prefix . 'schedspot_messages',
+            array( 'receiver_id' => $worker_id ),
+            array( '%d' )
+        );
+
+        // Update completed bookings to remove worker reference but keep for records
+        $wpdb->update(
+            $wpdb->prefix . 'schedspot_bookings',
+            array( 'worker_notes' => 'Worker account deleted' ),
+            array( 'worker_id' => $worker_id, 'status' => 'completed' ),
+            array( '%s' ),
+            array( '%d', '%s' )
+        );
+
+        // Delete user meta
+        delete_user_meta( $worker_id, 'schedspot_worker_profile' );
+        delete_user_meta( $worker_id, 'schedspot_payment_settings' );
+        delete_user_meta( $worker_id, 'schedspot_worker_settings' );
     }
 }

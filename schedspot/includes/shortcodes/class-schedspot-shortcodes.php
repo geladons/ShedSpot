@@ -140,11 +140,27 @@ class SchedSpot_Shortcodes {
                     </div>
 
                     <div class="schedspot-form-row">
-                        <label for="schedspot_worker_id"><?php _e( 'Preferred Worker', 'schedspot' ); ?></label>
-                        <select name="worker_id" id="schedspot_worker_id">
-                            <option value=""><?php _e( 'Any available worker', 'schedspot' ); ?></option>
-                            <?php echo $this->get_workers_options( $atts['worker_id'] ); ?>
-                        </select>
+                        <label for="schedspot_worker_id"><?php _e( 'Select Worker', 'schedspot' ); ?></label>
+                        <div id="schedspot-worker-selection">
+                            <div class="worker-selection-mode">
+                                <label>
+                                    <input type="radio" name="worker_selection_mode" value="auto" checked>
+                                    <?php _e( 'Auto-assign available worker', 'schedspot' ); ?>
+                                </label>
+                                <label>
+                                    <input type="radio" name="worker_selection_mode" value="manual">
+                                    <?php _e( 'Choose specific worker', 'schedspot' ); ?>
+                                </label>
+                            </div>
+
+                            <div id="manual-worker-selection" style="display: none;">
+                                <div id="available-workers-list">
+                                    <?php echo $this->get_workers_grid(); ?>
+                                </div>
+                            </div>
+
+                            <input type="hidden" name="worker_id" id="schedspot_worker_id" value="<?php echo esc_attr( $atts['worker_id'] ); ?>">
+                        </div>
                     </div>
                 </div>
 
@@ -281,6 +297,76 @@ class SchedSpot_Shortcodes {
                 </div>
             </div>
         </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            // Initialize datepicker
+            $('#schedspot_booking_date').datepicker({
+                dateFormat: 'yy-mm-dd',
+                minDate: 0
+            });
+
+            // Worker selection mode toggle
+            $('input[name="worker_selection_mode"]').change(function() {
+                if ($(this).val() === 'manual') {
+                    $('#manual-worker-selection').show();
+                } else {
+                    $('#manual-worker-selection').hide();
+                    $('#schedspot_worker_id').val('');
+                    $('.worker-card').removeClass('selected');
+                }
+            });
+
+            // Worker card selection
+            $(document).on('click', '.worker-card.available', function() {
+                var workerId = $(this).data('worker-id');
+                selectWorker(workerId);
+            });
+
+            // Worker selection button
+            $(document).on('click', '.select-worker-btn', function(e) {
+                e.stopPropagation();
+                var workerId = $(this).data('worker-id');
+                selectWorker(workerId);
+            });
+
+            function selectWorker(workerId) {
+                // Update hidden field
+                $('#schedspot_worker_id').val(workerId);
+
+                // Update UI
+                $('.worker-card').removeClass('selected');
+                $('.worker-card[data-worker-id="' + workerId + '"]').addClass('selected');
+
+                // Switch to manual mode if not already
+                $('input[name="worker_selection_mode"][value="manual"]').prop('checked', true);
+                $('#manual-worker-selection').show();
+
+                // Show confirmation
+                showWorkerSelected(workerId);
+            }
+
+            function showWorkerSelected(workerId) {
+                var workerName = $('.worker-card[data-worker-id="' + workerId + '"] h4').text();
+                var message = '<?php _e( 'Selected worker:', 'schedspot' ); ?> ' + workerName;
+
+                // Remove existing notifications
+                $('.worker-selection-notice').remove();
+
+                // Add new notification
+                $('#schedspot-worker-selection').prepend(
+                    '<div class="worker-selection-notice schedspot-notice schedspot-notice-success">' +
+                    message +
+                    '</div>'
+                );
+
+                // Auto-hide after 3 seconds
+                setTimeout(function() {
+                    $('.worker-selection-notice').fadeOut();
+                }, 3000);
+            }
+        });
+        </script>
         <?php
 
         return ob_get_clean();
@@ -561,6 +647,281 @@ class SchedSpot_Shortcodes {
         }
 
         return $options;
+    }
+
+    /**
+     * Get workers grid for enhanced selection.
+     *
+     * @since 1.0.0
+     * @return string HTML workers grid.
+     */
+    private function get_workers_grid() {
+        $workers = SchedSpot_Worker::get_workers( array( 'number' => 20 ) );
+
+        if ( empty( $workers ) ) {
+            return '<p>' . __( 'No workers available at this time.', 'schedspot' ) . '</p>';
+        }
+
+        ob_start();
+        ?>
+        <div class="schedspot-workers-grid">
+            <?php foreach ( $workers as $worker ) : ?>
+                <?php
+                $stats = $worker->get_statistics();
+                $is_available = $worker->profile['is_available'] ?? false;
+                ?>
+                <div class="worker-card <?php echo $is_available ? 'available' : 'unavailable'; ?>" data-worker-id="<?php echo esc_attr( $worker->id ); ?>">
+                    <div class="worker-avatar">
+                        <img src="<?php echo esc_url( get_avatar_url( $worker->id, array( 'size' => 64 ) ) ); ?>" alt="<?php echo esc_attr( $worker->user->display_name ); ?>">
+                        <div class="availability-indicator">
+                            <?php if ( $is_available ) : ?>
+                                <span class="status-dot available" title="<?php _e( 'Available', 'schedspot' ); ?>"></span>
+                            <?php else : ?>
+                                <span class="status-dot unavailable" title="<?php _e( 'Unavailable', 'schedspot' ); ?>"></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="worker-info">
+                        <h4><?php echo esc_html( $worker->user->display_name ); ?></h4>
+
+                        <?php if ( ! empty( $worker->profile['bio'] ) ) : ?>
+                            <p class="worker-bio"><?php echo esc_html( wp_trim_words( $worker->profile['bio'], 15 ) ); ?></p>
+                        <?php endif; ?>
+
+                        <div class="worker-stats">
+                            <?php if ( ! empty( $worker->profile['hourly_rate'] ) ) : ?>
+                                <div class="stat">
+                                    <span class="label"><?php _e( 'Rate:', 'schedspot' ); ?></span>
+                                    <span class="value">$<?php echo esc_html( number_format( $worker->profile['hourly_rate'], 2 ) ); ?>/hr</span>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="stat">
+                                <span class="label"><?php _e( 'Rating:', 'schedspot' ); ?></span>
+                                <span class="value">
+                                    <?php echo esc_html( number_format( $stats['rating'], 1 ) ); ?>/5
+                                    <span class="rating-stars">
+                                        <?php for ( $i = 1; $i <= 5; $i++ ) : ?>
+                                            <span class="star <?php echo $i <= $stats['rating'] ? 'filled' : 'empty'; ?>">★</span>
+                                        <?php endfor; ?>
+                                    </span>
+                                </span>
+                            </div>
+
+                            <div class="stat">
+                                <span class="label"><?php _e( 'Jobs:', 'schedspot' ); ?></span>
+                                <span class="value"><?php echo esc_html( $stats['total_bookings'] ); ?></span>
+                            </div>
+                        </div>
+
+                        <?php if ( ! empty( $worker->profile['skills'] ) ) : ?>
+                            <div class="worker-skills">
+                                <?php
+                                $skills = is_array( $worker->profile['skills'] ) ? $worker->profile['skills'] : explode( ',', $worker->profile['skills'] );
+                                $skills = array_slice( array_map( 'trim', $skills ), 0, 3 );
+                                foreach ( $skills as $skill ) :
+                                ?>
+                                    <span class="skill-tag"><?php echo esc_html( $skill ); ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="worker-actions">
+                        <?php if ( $is_available ) : ?>
+                            <button type="button" class="schedspot-btn schedspot-btn-primary select-worker-btn" data-worker-id="<?php echo esc_attr( $worker->id ); ?>">
+                                <?php _e( 'Select Worker', 'schedspot' ); ?>
+                            </button>
+                        <?php else : ?>
+                            <button type="button" class="schedspot-btn schedspot-btn-disabled" disabled>
+                                <?php _e( 'Unavailable', 'schedspot' ); ?>
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <style>
+        .schedspot-workers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .worker-card {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: #fff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .worker-card:hover {
+            border-color: #0073aa;
+            box-shadow: 0 2px 8px rgba(0,115,170,0.1);
+        }
+
+        .worker-card.selected {
+            border-color: #0073aa;
+            background: #f0f8ff;
+        }
+
+        .worker-card.unavailable {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .worker-avatar {
+            position: relative;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .worker-avatar img {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .availability-indicator {
+            position: absolute;
+            bottom: 5px;
+            right: calc(50% - 40px);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .status-dot.available {
+            background: #46b450;
+        }
+
+        .status-dot.unavailable {
+            background: #dc3232;
+        }
+
+        .worker-info h4 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            color: #333;
+        }
+
+        .worker-bio {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .worker-stats {
+            margin-bottom: 15px;
+        }
+
+        .worker-stats .stat {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .worker-stats .label {
+            color: #666;
+        }
+
+        .worker-stats .value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .rating-stars {
+            margin-left: 5px;
+        }
+
+        .rating-stars .star {
+            color: #ddd;
+            font-size: 12px;
+        }
+
+        .rating-stars .star.filled {
+            color: #ffb900;
+        }
+
+        .worker-skills {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .skill-tag {
+            display: inline-block;
+            background: #f0f0f0;
+            color: #333;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        .worker-actions {
+            text-align: center;
+        }
+
+        .schedspot-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .schedspot-btn-primary {
+            background: #0073aa;
+            color: #fff;
+        }
+
+        .schedspot-btn-primary:hover {
+            background: #005a87;
+        }
+
+        .schedspot-btn-disabled {
+            background: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .worker-selection-mode {
+            margin-bottom: 15px;
+        }
+
+        .worker-selection-mode label {
+            display: block;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .worker-selection-mode input[type="radio"] {
+            margin-right: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .schedspot-workers-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        </style>
+        <?php
+        return ob_get_clean();
     }
 
     /**
