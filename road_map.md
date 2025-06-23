@@ -91,6 +91,8 @@ SMS Login and Notifications ✅ COMPLETED & VERIFIED (Bug Fixed: Missing sms_aut
 
 Geofencing (Location Services) ✅ COMPLETED (June 22, 2025)
 
+Messaging System ✅ COMPLETED (June 22, 2025)
+
 **Purpose:** Enable location-based service restrictions and distance calculations for workers and bookings.
 
 **Requirements:**
@@ -122,6 +124,42 @@ Geofencing (Location Services) ✅ COMPLETED (June 22, 2025)
 - Frontend maps show nearby workers and allow location selection
 
 **Scope:** v2.0+ extension providing comprehensive location-based services
+
+**Naming:** All classes prefixed with `SchedSpot_`, functions with `schedspot_`, database tables with `schedspot_`
+
+**Purpose:** Enable real-time private messaging between clients and workers with comprehensive communication features.
+
+**Requirements:**
+- Real-time messaging interface with conversation management
+- File attachment support for photos and documents
+- Message status indicators (sent, delivered, read)
+- Email and SMS notification integration
+- Role-based permissions and booking relationship validation
+- Mobile-responsive design with touch-friendly interface
+
+**Structure:**
+- `class-schedspot-message.php` - Message model with CRUD operations
+- `class-schedspot-messaging.php` - Messaging controller and API handlers
+- `messaging.js` - Frontend real-time messaging interface
+- `[schedspot_messages]` shortcode - Standalone messaging interface
+- Database table: `schedspot_messages`
+- Dashboard integration for both customer and worker roles
+
+**Key Code Elements:**
+- `SchedSpot_Message::create_message()` - Message creation with validation
+- `SchedSpot_Messaging::send_message()` - Message sending with permission checks
+- `SchedSpot_Messaging::get_conversation()` - Conversation retrieval with pagination
+- `SchedSpot_Messaging::handle_file_upload()` - File attachment processing
+- AJAX endpoints for real-time communication
+- Email/SMS notification integration with existing systems
+
+**Triggers:**
+- Message sending triggers notifications to receiver
+- Dashboard integration shows unread message counts
+- Booking actions include messaging options
+- Admin interface provides message moderation capabilities
+
+**Scope:** v2.0+ extension providing comprehensive communication platform
 
 **Naming:** All classes prefixed with `SchedSpot_`, functions with `schedspot_`, database tables with `schedspot_`
 Description: Enable user login/verification via SMS (e.g. Twilio). Send SMS notifications on booking events.

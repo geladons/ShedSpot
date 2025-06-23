@@ -99,6 +99,9 @@ class SchedSpot_Install {
             'schedspot_google_maps_api_key'    => '',
             'schedspot_default_service_radius' => 25.0,
             'schedspot_distance_unit'          => 'km',
+            'schedspot_enable_messaging'        => 'yes',
+            'schedspot_email_message_notifications' => 'yes',
+            'schedspot_sms_message_notifications'   => 'yes',
             'schedspot_auto_approve_bookings'  => 'no',
             'schedspot_install_sample_data'    => 'yes',
             'schedspot_enable_payments'        => 'yes',
@@ -237,6 +240,27 @@ CREATE TABLE {$wpdb->prefix}schedspot_service_areas (
   KEY worker_id (worker_id),
   KEY type (type),
   KEY is_active (is_active)
+) $collate;
+
+CREATE TABLE {$wpdb->prefix}schedspot_messages (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  sender_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  receiver_id bigint(20) unsigned NOT NULL,
+  booking_id bigint(20) unsigned DEFAULT NULL,
+  content longtext NOT NULL,
+  message_type varchar(20) NOT NULL DEFAULT 'text',
+  attachment_data longtext DEFAULT NULL,
+  status varchar(20) NOT NULL DEFAULT 'sent',
+  read_at datetime DEFAULT NULL,
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY sender_id (sender_id),
+  KEY receiver_id (receiver_id),
+  KEY booking_id (booking_id),
+  KEY status (status),
+  KEY created_at (created_at),
+  KEY conversation (sender_id, receiver_id, created_at)
 ) $collate;
         ";
 

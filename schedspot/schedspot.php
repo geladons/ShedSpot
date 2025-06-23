@@ -118,6 +118,10 @@ final class SchedSpot_Core {
         include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-sms.php';
         include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-geolocation.php';
 
+        // Messaging classes
+        include_once SCHEDSPOT_INCLUDES_DIR . 'messaging/class-schedspot-message.php';
+        include_once SCHEDSPOT_INCLUDES_DIR . 'messaging/class-schedspot-messaging.php';
+
         // Admin includes
         if ( is_admin() ) {
             include_once SCHEDSPOT_ADMIN_DIR . 'class-schedspot-admin.php';
@@ -181,6 +185,9 @@ final class SchedSpot_Core {
 
         // Initialize geolocation integration
         new SchedSpot_Geolocation();
+
+        // Initialize messaging system
+        new SchedSpot_Messaging();
 
         // Initialize shortcodes
         new SchedSpot_Shortcodes();

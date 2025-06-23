@@ -38,6 +38,7 @@ class SchedSpot_Shortcodes {
             'schedspot_booking_form' => 'booking_form',
             'schedspot_service_list' => 'service_list',
             'schedspot_dashboard'    => 'dashboard',
+            'schedspot_messages'     => 'messages',
         );
 
         foreach ( $shortcodes as $shortcode => $function ) {
@@ -581,6 +582,25 @@ class SchedSpot_Shortcodes {
 
         ?>
         <div class="schedspot-customer-dashboard">
+            <!-- Messages Section -->
+            <?php if ( get_option( 'schedspot_enable_messaging', true ) && current_user_can( 'schedspot_read_messages' ) ) : ?>
+                <?php
+                $messaging = new SchedSpot_Messaging();
+                $unread_count = $messaging->get_unread_count( $user_id );
+                ?>
+                <div class="schedspot-messages-section">
+                    <h3>
+                        <?php _e( 'Messages', 'schedspot' ); ?>
+                        <?php if ( $unread_count > 0 ) : ?>
+                            <span class="unread-badge"><?php echo esc_html( $unread_count ); ?></span>
+                        <?php endif; ?>
+                    </h3>
+                    <div class="messages-preview">
+                        <?php echo do_shortcode( '[schedspot_messages]' ); ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <h3><?php _e( 'My Bookings', 'schedspot' ); ?></h3>
             <?php if ( ! empty( $bookings ) ) : ?>
                 <div class="schedspot-bookings-list">
@@ -590,6 +610,13 @@ class SchedSpot_Shortcodes {
                             <div class="booking-time"><?php echo esc_html( date( 'g:i A', strtotime( $booking->start_time ) ) ); ?></div>
                             <div class="booking-status"><?php echo esc_html( ucfirst( $booking->status ) ); ?></div>
                             <div class="booking-cost">$<?php echo esc_html( number_format( $booking->total_cost, 2 ) ); ?></div>
+                            <?php if ( get_option( 'schedspot_enable_messaging', true ) ) : ?>
+                                <div class="booking-actions">
+                                    <button class="schedspot-btn schedspot-btn-small" onclick="messageWorker(<?php echo esc_attr( $booking->worker_id ); ?>, <?php echo esc_attr( $booking->id ); ?>)">
+                                        <?php _e( 'Message Worker', 'schedspot' ); ?>
+                                    </button>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -597,6 +624,14 @@ class SchedSpot_Shortcodes {
                 <p><?php _e( 'You have no bookings yet.', 'schedspot' ); ?></p>
             <?php endif; ?>
         </div>
+
+        <script>
+        function messageWorker(workerId, bookingId) {
+            // This would open a messaging interface or redirect to messages page
+            var messagesUrl = '<?php echo home_url( '/messages/' ); ?>?user_id=' + workerId + '&booking_id=' + bookingId;
+            window.location.href = messagesUrl;
+        }
+        </script>
         <?php
     }
 
@@ -717,6 +752,9 @@ class SchedSpot_Shortcodes {
                                     <?php elseif ( $booking->status === 'in_progress' ) : ?>
                                         <button class="schedspot-btn schedspot-btn-small" onclick="updateBookingStatus(<?php echo esc_attr( $booking->id ); ?>, 'completed')"><?php _e( 'Complete', 'schedspot' ); ?></button>
                                     <?php endif; ?>
+                                    <?php if ( get_option( 'schedspot_enable_messaging', true ) ) : ?>
+                                        <button class="schedspot-btn schedspot-btn-small schedspot-btn-link" onclick="messageClient(<?php echo esc_attr( $booking->user_id ); ?>, <?php echo esc_attr( $booking->id ); ?>)"><?php _e( 'Message', 'schedspot' ); ?></button>
+                                    <?php endif; ?>
                                     <button class="schedspot-btn schedspot-btn-small schedspot-btn-link" onclick="contactClient('<?php echo esc_attr( $booking->client_details['email'] ); ?>', '<?php echo esc_attr( $booking->client_details['phone'] ); ?>')"><?php _e( 'Contact', 'schedspot' ); ?></button>
                                 </div>
                             </div>
@@ -818,6 +856,12 @@ class SchedSpot_Shortcodes {
         function loadAllBookings() {
             // This would load all bookings with pagination
             alert('<?php _e( 'Full booking history coming soon!', 'schedspot' ); ?>');
+        }
+
+        function messageClient(clientId, bookingId) {
+            // This would open a messaging interface or redirect to messages page
+            var messagesUrl = '<?php echo home_url( '/messages/' ); ?>?user_id=' + clientId + '&booking_id=' + bookingId;
+            window.location.href = messagesUrl;
         }
         </script>
         <?php
@@ -942,5 +986,390 @@ class SchedSpot_Shortcodes {
         }
         </style>
         <?php
+    }
+
+    /**
+     * Messages shortcode.
+     *
+     * @since 2.0.0
+     * @param array $atts Shortcode attributes.
+     * @return string HTML output.
+     */
+    public function messages( $atts ) {
+        $atts = shortcode_atts( array(
+            'class'       => 'schedspot-messaging',
+            'user_id'     => 0,
+            'booking_id'  => 0,
+        ), $atts, 'schedspot_messages' );
+
+        if ( ! is_user_logged_in() ) {
+            return '<p>' . __( 'Please log in to access messaging.', 'schedspot' ) . '</p>';
+        }
+
+        if ( ! current_user_can( 'schedspot_read_messages' ) ) {
+            return '<p>' . __( 'You do not have permission to access messaging.', 'schedspot' ) . '</p>';
+        }
+
+        ob_start();
+
+        $current_user_id = get_current_user_id();
+        $target_user_id = absint( $atts['user_id'] );
+        $booking_id = absint( $atts['booking_id'] );
+
+        ?>
+        <div class="<?php echo esc_attr( $atts['class'] ); ?>">
+            <div class="schedspot-conversations" id="schedspot-conversations">
+                <div class="conversations-header">
+                    <h3><?php _e( 'Conversations', 'schedspot' ); ?></h3>
+                </div>
+                <div class="conversations-list">
+                    <!-- Conversations will be loaded here by JavaScript -->
+                    <div class="loading"><?php _e( 'Loading conversations...', 'schedspot' ); ?></div>
+                </div>
+            </div>
+
+            <div class="schedspot-chat-area">
+                <div class="chat-header">
+                    <h3 id="chat-title"><?php _e( 'Select a conversation', 'schedspot' ); ?></h3>
+                </div>
+
+                <div class="schedspot-messages" id="schedspot-messages">
+                    <div class="no-conversation">
+                        <p><?php _e( 'Select a conversation from the left to start messaging.', 'schedspot' ); ?></p>
+                    </div>
+                </div>
+
+                <form class="schedspot-message-form" id="schedspot-message-form" style="display: none;">
+                    <input type="hidden" id="schedspot-receiver-id" name="receiver_id" value="<?php echo esc_attr( $target_user_id ); ?>">
+                    <?php if ( $booking_id ) : ?>
+                        <input type="hidden" name="booking_id" value="<?php echo esc_attr( $booking_id ); ?>">
+                    <?php endif; ?>
+
+                    <div class="schedspot-message-input">
+                        <textarea
+                            id="schedspot-message-content"
+                            name="content"
+                            placeholder="<?php esc_attr_e( 'Type your message...', 'schedspot' ); ?>"
+                            rows="1"
+                            required
+                        ></textarea>
+
+                        <div class="message-actions">
+                            <label for="schedspot-message-attachment" class="attachment-button" title="<?php esc_attr_e( 'Attach File', 'schedspot' ); ?>">
+                                📎
+                                <input type="file" id="schedspot-message-attachment" name="attachment" style="display: none;" accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
+                            </label>
+
+                            <button type="submit" class="send-button">
+                                <?php _e( 'Send', 'schedspot' ); ?>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <?php if ( $target_user_id ) : ?>
+        <script>
+        jQuery(document).ready(function($) {
+            // Auto-select conversation if user_id is specified
+            setTimeout(function() {
+                SchedSpotMessaging.selectConversation(<?php echo $target_user_id; ?>);
+            }, 1000);
+        });
+        </script>
+        <?php endif; ?>
+
+        <style>
+        .schedspot-messaging {
+            display: flex;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .schedspot-conversations {
+            width: 300px;
+            border-right: 1px solid #ddd;
+            background: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .conversations-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+        }
+
+        .conversations-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .schedspot-conversation-item {
+            display: flex;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .schedspot-conversation-item:hover {
+            background: #f0f0f0;
+        }
+
+        .schedspot-conversation-item.active {
+            background: #0073aa;
+            color: white;
+        }
+
+        .schedspot-conversation-item .user-avatar {
+            margin-right: 10px;
+        }
+
+        .schedspot-conversation-item .user-avatar img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .schedspot-conversation-item .conversation-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .schedspot-conversation-item .user-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .schedspot-conversation-item .unread-count {
+            background: #e74c3c;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: normal;
+        }
+
+        .schedspot-conversation-item .last-message {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .schedspot-conversation-item.active .last-message {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .schedspot-conversation-item .time-ago {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .schedspot-conversation-item.active .time-ago {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .schedspot-chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            background: #fff;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .schedspot-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+
+        .schedspot-message {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+
+        .schedspot-message.own {
+            flex-direction: row-reverse;
+        }
+
+        .schedspot-message .avatar {
+            margin: 0 10px;
+        }
+
+        .schedspot-message .avatar img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .schedspot-message .content {
+            max-width: 70%;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 18px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .schedspot-message.own .content {
+            background: #0073aa;
+            color: white;
+        }
+
+        .schedspot-message .text {
+            margin-bottom: 5px;
+        }
+
+        .schedspot-message .time {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .schedspot-message.own .time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .schedspot-attachment {
+            display: inline-block;
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+            margin-top: 5px;
+            text-decoration: none;
+            color: inherit;
+            font-size: 12px;
+        }
+
+        .schedspot-attachment:hover {
+            background: rgba(0,0,0,0.2);
+        }
+
+        .schedspot-message-form {
+            padding: 20px;
+            border-top: 1px solid #ddd;
+            background: white;
+        }
+
+        .schedspot-message-input {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .schedspot-message-input textarea {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            resize: none;
+            min-height: 40px;
+            max-height: 120px;
+            font-family: inherit;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .attachment-button {
+            padding: 10px;
+            background: #f1f1f1;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 16px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .attachment-button:hover {
+            background: #e1e1e1;
+        }
+
+        .send-button {
+            padding: 10px 20px;
+            background: #0073aa;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .send-button:hover {
+            background: #005a87;
+        }
+
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading, .no-conversation, .no-messages {
+            text-align: center;
+            color: #666;
+            padding: 40px 20px;
+        }
+
+        .attachment-preview {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background: #e1f5fe;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #0277bd;
+        }
+
+        @media (max-width: 768px) {
+            .schedspot-messaging {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .schedspot-conversations {
+                width: 100%;
+                height: 200px;
+            }
+
+            .schedspot-chat-area {
+                height: 400px;
+            }
+        }
+        </style>
+        <?php
+
+        return ob_get_clean();
     }
 }
