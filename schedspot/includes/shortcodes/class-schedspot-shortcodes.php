@@ -109,15 +109,25 @@ class SchedSpot_Shortcodes {
                 <div class="schedspot-nav-links">
                     <a href="<?php echo esc_url( $this->get_booking_form_url() ); ?>" class="schedspot-nav-link active">
                         <span class="dashicons dashicons-calendar-alt"></span>
-                        <?php _e( 'Book Service', 'schedspot' ); ?>
+                        <?php _e( 'Book a Service', 'schedspot' ); ?>
                     </a>
                     <a href="<?php echo esc_url( $this->get_dashboard_url() ); ?>" class="schedspot-nav-link">
-                        <span class="dashicons dashicons-dashboard"></span>
-                        <?php _e( 'Dashboard', 'schedspot' ); ?>
+                        <span class="dashicons dashicons-list-view"></span>
+                        <?php _e( 'My Bookings', 'schedspot' ); ?>
+                    </a>
+                    <?php if ( get_option( 'schedspot_enable_messaging', true ) ) : ?>
+                    <a href="<?php echo esc_url( $this->get_messages_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-email-alt"></span>
+                        <?php _e( 'Messages', 'schedspot' ); ?>
+                    </a>
+                    <?php endif; ?>
+                    <a href="<?php echo esc_url( $this->get_profile_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-admin-users"></span>
+                        <?php _e( 'Profile/Settings', 'schedspot' ); ?>
                     </a>
                     <?php if ( current_user_can( 'manage_options' ) ) : ?>
                     <a href="<?php echo admin_url( 'admin.php?page=schedspot-role-switcher' ); ?>" class="schedspot-nav-link admin-switcher">
-                        <span class="dashicons dashicons-admin-users"></span>
+                        <span class="dashicons dashicons-admin-settings"></span>
                         <?php printf( __( 'Admin: %s', 'schedspot' ), $this->get_role_display_name( SchedSpot()->get_effective_user_role() ) ); ?>
                     </a>
                     <?php endif; ?>
@@ -125,18 +135,26 @@ class SchedSpot_Shortcodes {
             </div>
             <?php endif; ?>
 
-            <form method="post" id="schedspot-booking-form">
-                <?php wp_nonce_field( 'schedspot_booking_form', 'schedspot_booking_nonce' ); ?>
+            <div class="schedspot-form-container">
+                <form method="post" id="schedspot-booking-form">
+                    <?php wp_nonce_field( 'schedspot_booking_form', 'schedspot_booking_nonce' ); ?>
                 
                 <div class="schedspot-form-section">
                     <h3><?php _e( 'Service Details', 'schedspot' ); ?></h3>
-                    
-                    <div class="schedspot-form-row">
-                        <label for="schedspot_service_id"><?php _e( 'Service', 'schedspot' ); ?> <span class="required">*</span></label>
-                        <select name="service_id" id="schedspot_service_id" required>
-                            <option value=""><?php _e( 'Select a service', 'schedspot' ); ?></option>
-                            <?php echo $this->get_services_options( $atts['service_id'] ); ?>
-                        </select>
+
+                    <div class="schedspot-form-grid">
+                        <div class="schedspot-form-row">
+                            <label for="schedspot_service_id"><?php _e( 'Service', 'schedspot' ); ?> <span class="required">*</span></label>
+                            <select name="service_id" id="schedspot_service_id" required>
+                                <option value=""><?php _e( 'Select a service', 'schedspot' ); ?></option>
+                                <?php echo $this->get_services_options( $atts['service_id'] ); ?>
+                            </select>
+                        </div>
+
+                        <div class="schedspot-form-row">
+                            <label for="schedspot_description"><?php _e( 'Service Description', 'schedspot' ); ?></label>
+                            <textarea name="description" id="schedspot_description" placeholder="<?php esc_attr_e( 'Please describe what you need in detail. Include any specific requirements, materials needed, or special instructions...', 'schedspot' ); ?>"></textarea>
+                        </div>
                     </div>
 
                     <div class="schedspot-form-row">
@@ -166,53 +184,59 @@ class SchedSpot_Shortcodes {
 
                 <div class="schedspot-form-section">
                     <h3><?php _e( 'Date & Time', 'schedspot' ); ?></h3>
-                    
-                    <div class="schedspot-form-row">
-                        <label for="schedspot_booking_date"><?php _e( 'Date', 'schedspot' ); ?> <span class="required">*</span></label>
-                        <input type="date" name="booking_date" id="schedspot_booking_date" required min="<?php echo date( 'Y-m-d' ); ?>">
-                    </div>
 
-                    <div class="schedspot-form-row">
-                        <label for="schedspot_start_time"><?php _e( 'Start Time', 'schedspot' ); ?> <span class="required">*</span></label>
-                        <input type="time" name="start_time" id="schedspot_start_time" required>
-                    </div>
+                    <div class="schedspot-form-grid">
+                        <div class="schedspot-form-row">
+                            <label for="schedspot_booking_date"><?php _e( 'Date', 'schedspot' ); ?> <span class="required">*</span></label>
+                            <input type="date" name="booking_date" id="schedspot_booking_date" required min="<?php echo date( 'Y-m-d' ); ?>">
+                        </div>
 
-                    <div class="schedspot-form-row">
-                        <label for="schedspot_duration"><?php _e( 'Duration (minutes)', 'schedspot' ); ?> <span class="required">*</span></label>
-                        <select name="duration" id="schedspot_duration" required>
-                            <option value="30">30 <?php _e( 'minutes', 'schedspot' ); ?></option>
-                            <option value="60" selected>1 <?php _e( 'hour', 'schedspot' ); ?></option>
-                            <option value="90">1.5 <?php _e( 'hours', 'schedspot' ); ?></option>
-                            <option value="120">2 <?php _e( 'hours', 'schedspot' ); ?></option>
-                            <option value="180">3 <?php _e( 'hours', 'schedspot' ); ?></option>
-                            <option value="240">4 <?php _e( 'hours', 'schedspot' ); ?></option>
-                        </select>
+                        <div class="schedspot-form-row">
+                            <label for="schedspot_start_time"><?php _e( 'Start Time', 'schedspot' ); ?> <span class="required">*</span></label>
+                            <input type="time" name="start_time" id="schedspot_start_time" required>
+                        </div>
+
+                        <div class="schedspot-form-row">
+                            <label for="schedspot_duration"><?php _e( 'Duration', 'schedspot' ); ?> <span class="required">*</span></label>
+                            <select name="duration" id="schedspot_duration" required>
+                                <option value="30">30 minutes</option>
+                                <option value="60" selected>1 hour</option>
+                                <option value="90">1.5 hours</option>
+                                <option value="120">2 hours</option>
+                                <option value="180">3 hours</option>
+                                <option value="240">4 hours</option>
+                                <option value="480">8 hours (full day)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
                 <div class="schedspot-form-section">
                     <h3><?php _e( 'Contact Information', 'schedspot' ); ?></h3>
-                    
-                    <div class="schedspot-form-row">
-                        <label for="schedspot_client_name"><?php _e( 'Full Name', 'schedspot' ); ?> <span class="required">*</span></label>
-                        <input type="text" name="client_name" id="schedspot_client_name" required value="<?php echo esc_attr( $this->get_current_user_name() ); ?>">
-                    </div>
 
-                    <div class="schedspot-form-row">
-                        <label for="schedspot_client_email"><?php _e( 'Email Address', 'schedspot' ); ?> <span class="required">*</span></label>
-                        <input type="email" name="client_email" id="schedspot_client_email" required value="<?php echo esc_attr( $this->get_current_user_email() ); ?>">
-                    </div>
+                    <div class="schedspot-form-grid">
+                        <div class="schedspot-form-row">
+                            <label for="schedspot_client_name"><?php _e( 'Full Name', 'schedspot' ); ?> <span class="required">*</span></label>
+                            <input type="text" name="client_name" id="schedspot_client_name" required value="<?php echo esc_attr( $this->get_current_user_name() ); ?>" placeholder="<?php esc_attr_e( 'Enter your full name', 'schedspot' ); ?>">
+                        </div>
 
-                    <div class="schedspot-form-row">
-                        <label for="schedspot_client_phone"><?php _e( 'Phone Number', 'schedspot' ); ?></label>
-                        <input type="tel" name="client_phone" id="schedspot_client_phone">
+                        <div class="schedspot-form-row">
+                            <label for="schedspot_client_email"><?php _e( 'Email Address', 'schedspot' ); ?> <span class="required">*</span></label>
+                            <input type="email" name="client_email" id="schedspot_client_email" required value="<?php echo esc_attr( $this->get_current_user_email() ); ?>" placeholder="<?php esc_attr_e( 'your.email@example.com', 'schedspot' ); ?>">
+                        </div>
+
+                        <div class="schedspot-form-row">
+                            <label for="schedspot_client_phone"><?php _e( 'Phone Number', 'schedspot' ); ?></label>
+                            <input type="tel" name="client_phone" id="schedspot_client_phone" placeholder="<?php esc_attr_e( '(555) 123-4567', 'schedspot' ); ?>">
+                        </div>
                     </div>
 
                     <div class="schedspot-form-row">
                         <label for="schedspot_client_address"><?php _e( 'Service Address', 'schedspot' ); ?></label>
-                        <textarea name="client_address" id="schedspot-client-address" rows="3" placeholder="<?php _e( 'Enter the address where the service should be performed', 'schedspot' ); ?>"></textarea>
+                        <textarea name="client_address" id="schedspot-client-address" rows="3" placeholder="<?php _e( 'Enter the complete address where the service should be performed, including apartment/unit number if applicable', 'schedspot' ); ?>"></textarea>
                         <?php if ( get_option( 'schedspot_enable_geofencing', false ) ) : ?>
                         <button type="button" class="schedspot-btn schedspot-btn-secondary schedspot-get-location" style="margin-top: 10px;">
+                            <span class="dashicons dashicons-location"></span>
                             <?php _e( 'Use My Current Location', 'schedspot' ); ?>
                         </button>
                         <?php endif; ?>
@@ -239,79 +263,157 @@ class SchedSpot_Shortcodes {
 
                 <div class="schedspot-form-section">
                     <h3><?php _e( 'Additional Information', 'schedspot' ); ?></h3>
-                    
+
                     <div class="schedspot-form-row">
-                        <label for="schedspot_notes"><?php _e( 'Notes', 'schedspot' ); ?></label>
-                        <textarea name="notes" id="schedspot_notes" rows="4" placeholder="<?php _e( 'Any additional details or special requirements...', 'schedspot' ); ?>"></textarea>
+                        <label for="schedspot_notes"><?php _e( 'Special Instructions & Notes', 'schedspot' ); ?></label>
+                        <textarea name="notes" id="schedspot_notes" rows="4" placeholder="<?php _e( 'Any additional details, special requirements, preferred timing, access instructions, or other important information for the worker...', 'schedspot' ); ?>"></textarea>
                     </div>
                 </div>
 
                 <div class="schedspot-form-actions">
                     <button type="submit" name="schedspot_submit_booking" class="schedspot-btn schedspot-btn-primary">
+                        <span class="dashicons dashicons-yes"></span>
                         <?php _e( 'Submit Booking Request', 'schedspot' ); ?>
                     </button>
                 </div>
-            </form>
+                </form>
 
-            <!-- Payment Information -->
-            <div class="schedspot-payment-info">
-                <h3><?php _e( 'Payment Information', 'schedspot' ); ?></h3>
-                <div class="payment-details">
-                    <?php
-                    $payment_required = get_option( 'schedspot_payment_required', 'deposit' );
-                    $deposit_rate = get_option( 'schedspot_deposit_rate', 30 );
-                    ?>
+                <!-- Payment Information -->
+                <div class="schedspot-payment-info">
+                    <h3><?php _e( 'Payment Information', 'schedspot' ); ?></h3>
+                    <div class="payment-details">
+                        <?php
+                        $payment_required = get_option( 'schedspot_payment_required', 'deposit' );
+                        $deposit_rate = get_option( 'schedspot_deposit_rate', 30 );
+                        ?>
 
-                    <?php if ( $payment_required === 'full' ) : ?>
-                        <p><?php _e( 'Full payment is required to confirm your booking.', 'schedspot' ); ?></p>
-                    <?php elseif ( $payment_required === 'deposit' ) : ?>
-                        <p><?php printf( __( 'A %d%% deposit is required to confirm your booking. The remaining balance will be collected after service completion.', 'schedspot' ), $deposit_rate ); ?></p>
-                    <?php else : ?>
-                        <p><?php _e( 'Payment will be collected after service completion.', 'schedspot' ); ?></p>
-                    <?php endif; ?>
+                        <?php if ( $payment_required === 'full' ) : ?>
+                            <p><?php _e( 'Full payment is required to confirm your booking.', 'schedspot' ); ?></p>
+                        <?php elseif ( $payment_required === 'deposit' ) : ?>
+                            <p><?php printf( __( 'A %d%% deposit is required to confirm your booking. The remaining balance will be collected after service completion.', 'schedspot' ), $deposit_rate ); ?></p>
+                        <?php else : ?>
+                            <p><?php _e( 'Payment will be collected after service completion.', 'schedspot' ); ?></p>
+                        <?php endif; ?>
 
-                    <div class="payment-methods">
-                        <p><strong><?php _e( 'Accepted Payment Methods:', 'schedspot' ); ?></strong></p>
-                        <div class="payment-icons">
-                            <?php if ( class_exists( 'WooCommerce' ) ) : ?>
-                                <?php
-                                $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
-                                foreach ( $available_gateways as $gateway ) :
-                                    if ( $gateway->enabled === 'yes' ) :
-                                ?>
-                                    <span class="payment-method"><?php echo esc_html( $gateway->get_title() ); ?></span>
-                                <?php
-                                    endif;
-                                endforeach;
-                                ?>
-                            <?php else : ?>
-                                <span class="payment-method"><?php _e( 'Credit Card', 'schedspot' ); ?></span>
-                                <span class="payment-method"><?php _e( 'PayPal', 'schedspot' ); ?></span>
-                            <?php endif; ?>
+                        <div class="payment-methods">
+                            <p><strong><?php _e( 'Accepted Payment Methods:', 'schedspot' ); ?></strong></p>
+                            <div class="payment-icons">
+                                <?php if ( class_exists( 'WooCommerce' ) ) : ?>
+                                    <?php
+                                    $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+                                    foreach ( $available_gateways as $gateway ) :
+                                        if ( $gateway->enabled === 'yes' ) :
+                                    ?>
+                                        <span class="payment-method"><?php echo esc_html( $gateway->get_title() ); ?></span>
+                                    <?php
+                                        endif;
+                                    endforeach;
+                                    ?>
+                                <?php else : ?>
+                                    <span class="payment-method"><?php _e( 'Credit Card', 'schedspot' ); ?></span>
+                                    <span class="payment-method"><?php _e( 'PayPal', 'schedspot' ); ?></span>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="security-notice">
-                        <small><?php _e( '🔒 Your payment information is secure and encrypted.', 'schedspot' ); ?></small>
+                        <div class="security-notice">
+                            <small><?php _e( '🔒 Your payment information is secure and encrypted.', 'schedspot' ); ?></small>
+                        </div>
                     </div>
                 </div>
             </div>
+
         </div>
 
         <script>
         jQuery(document).ready(function($) {
-            // Initialize datepicker
+            // Initialize datepicker with modern styling
             $('#schedspot_booking_date').datepicker({
                 dateFormat: 'yy-mm-dd',
-                minDate: 0
+                minDate: 0,
+                showAnim: 'slideDown',
+                changeMonth: true,
+                changeYear: true
+            });
+
+            // Form validation and enhancement
+            $('#schedspot-booking-form').on('submit', function(e) {
+                var isValid = true;
+                var firstError = null;
+
+                // Clear previous errors
+                $('.schedspot-form-row').removeClass('error');
+                $('.error-message').remove();
+
+                // Validate required fields
+                $(this).find('[required]').each(function() {
+                    if (!$(this).val().trim()) {
+                        isValid = false;
+                        var $row = $(this).closest('.schedspot-form-row');
+                        $row.addClass('error');
+
+                        if (!firstError) {
+                            firstError = $row;
+                        }
+
+                        var label = $row.find('label').text().replace('*', '').trim();
+                        $row.append('<div class="error-message">' + label + ' is required.</div>');
+                    }
+                });
+
+                // Validate email format
+                var email = $('#schedspot_client_email').val();
+                if (email && !isValidEmail(email)) {
+                    isValid = false;
+                    var $row = $('#schedspot_client_email').closest('.schedspot-form-row');
+                    $row.addClass('error');
+                    $row.append('<div class="error-message">Please enter a valid email address.</div>');
+
+                    if (!firstError) {
+                        firstError = $row;
+                    }
+                }
+
+                // Validate phone format (basic)
+                var phone = $('#schedspot_client_phone').val();
+                if (phone && phone.length < 10) {
+                    isValid = false;
+                    var $row = $('#schedspot_client_phone').closest('.schedspot-form-row');
+                    $row.addClass('error');
+                    $row.append('<div class="error-message">Please enter a valid phone number.</div>');
+
+                    if (!firstError) {
+                        firstError = $row;
+                    }
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+
+                    // Scroll to first error
+                    if (firstError) {
+                        $('html, body').animate({
+                            scrollTop: firstError.offset().top - 100
+                        }, 500);
+                    }
+
+                    // Show error notification
+                    showNotification('Please correct the errors below.', 'error');
+                    return false;
+                }
+
+                // Show loading state
+                var $submitBtn = $(this).find('[type="submit"]');
+                $submitBtn.prop('disabled', true);
+                $submitBtn.html('<span class="dashicons dashicons-update spin"></span> Processing...');
             });
 
             // Worker selection mode toggle
             $('input[name="worker_selection_mode"]').change(function() {
                 if ($(this).val() === 'manual') {
-                    $('#manual-worker-selection').show();
+                    $('#manual-worker-selection').slideDown();
                 } else {
-                    $('#manual-worker-selection').hide();
+                    $('#manual-worker-selection').slideUp();
                     $('#schedspot_worker_id').val('');
                     $('.worker-card').removeClass('selected');
                 }
@@ -328,6 +430,34 @@ class SchedSpot_Shortcodes {
                 e.stopPropagation();
                 var workerId = $(this).data('worker-id');
                 selectWorker(workerId);
+            });
+
+            // Service selection change handler
+            $('#schedspot_service_id').change(function() {
+                var serviceId = $(this).val();
+                if (serviceId) {
+                    // You could load service-specific information here
+                    loadServiceDetails(serviceId);
+                }
+            });
+
+            // Auto-resize textareas
+            $('textarea').on('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+
+            // Form field focus effects
+            $('.schedspot-form-row input, .schedspot-form-row select, .schedspot-form-row textarea').on('focus', function() {
+                $(this).closest('.schedspot-form-row').addClass('focused');
+            }).on('blur', function() {
+                $(this).closest('.schedspot-form-row').removeClass('focused');
+
+                // Clear error state when user starts typing
+                if ($(this).val().trim()) {
+                    $(this).closest('.schedspot-form-row').removeClass('error');
+                    $(this).siblings('.error-message').remove();
+                }
             });
 
             function selectWorker(workerId) {
@@ -365,8 +495,91 @@ class SchedSpot_Shortcodes {
                     $('.worker-selection-notice').fadeOut();
                 }, 3000);
             }
+
+            function loadServiceDetails(serviceId) {
+                // Placeholder for loading service-specific details
+                // This could fetch pricing, duration estimates, etc.
+            }
+
+            function isValidEmail(email) {
+                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
+
+            function showNotification(message, type) {
+                var notificationClass = 'schedspot-notice-' + (type || 'info');
+                var notification = $('<div class="schedspot-notice ' + notificationClass + '">' + message + '</div>');
+
+                $('.schedspot-form-container').prepend(notification);
+
+                setTimeout(function() {
+                    notification.fadeOut(function() {
+                        $(this).remove();
+                    });
+                }, 5000);
+            }
         });
         </script>
+
+        <style>
+        /* Additional form enhancements */
+        .schedspot-form-row.focused {
+            transform: translateY(-2px);
+        }
+
+        .schedspot-form-row.error input,
+        .schedspot-form-row.error select,
+        .schedspot-form-row.error textarea {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        .dashicons.spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Enhanced button states */
+        .schedspot-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Form section animations */
+        .schedspot-form-section {
+            opacity: 0;
+            animation: slideInUp 0.6s ease-out forwards;
+        }
+
+        .schedspot-form-section:nth-child(1) { animation-delay: 0.1s; }
+        .schedspot-form-section:nth-child(2) { animation-delay: 0.2s; }
+        .schedspot-form-section:nth-child(3) { animation-delay: 0.3s; }
+        .schedspot-form-section:nth-child(4) { animation-delay: 0.4s; }
+        .schedspot-form-section:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        </style>
         <?php
 
         return ob_get_clean();
@@ -461,16 +674,26 @@ class SchedSpot_Shortcodes {
                 <div class="schedspot-nav-links">
                     <a href="<?php echo esc_url( $this->get_booking_form_url() ); ?>" class="schedspot-nav-link">
                         <span class="dashicons dashicons-calendar-alt"></span>
-                        <?php _e( 'Book Service', 'schedspot' ); ?>
+                        <?php _e( 'Book a Service', 'schedspot' ); ?>
                     </a>
                     <a href="<?php echo esc_url( $this->get_dashboard_url() ); ?>" class="schedspot-nav-link active">
-                        <span class="dashicons dashicons-dashboard"></span>
-                        <?php _e( 'Dashboard', 'schedspot' ); ?>
+                        <span class="dashicons dashicons-list-view"></span>
+                        <?php _e( 'My Bookings', 'schedspot' ); ?>
+                    </a>
+                    <?php if ( get_option( 'schedspot_enable_messaging', true ) ) : ?>
+                    <a href="<?php echo esc_url( $this->get_messages_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-email-alt"></span>
+                        <?php _e( 'Messages', 'schedspot' ); ?>
+                    </a>
+                    <?php endif; ?>
+                    <a href="<?php echo esc_url( $this->get_profile_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-admin-users"></span>
+                        <?php _e( 'Profile/Settings', 'schedspot' ); ?>
                     </a>
                     <?php if ( $user_role === 'schedspot_worker' ) : ?>
                     <a href="#" class="schedspot-nav-link" onclick="openWorkerSettings()">
                         <span class="dashicons dashicons-admin-settings"></span>
-                        <?php _e( 'Settings', 'schedspot' ); ?>
+                        <?php _e( 'Worker Settings', 'schedspot' ); ?>
                     </a>
                     <?php endif; ?>
                     <?php if ( current_user_can( 'manage_options' ) ) : ?>
@@ -515,11 +738,28 @@ class SchedSpot_Shortcodes {
      * @since 0.1.0
      */
     private function handle_booking_submission() {
-        // Get current user or create guest user
+        // Get current user or handle guest booking
         $user_id = get_current_user_id();
+        $is_guest = false;
+
         if ( ! $user_id ) {
-            // For now, require login. In future versions, we can create guest bookings
-            wp_die( __( 'You must be logged in to make a booking.', 'schedspot' ) );
+            // Handle guest booking
+            $guest_email = sanitize_email( $_POST['schedspot_client_email'] ?? '' );
+            $guest_name = sanitize_text_field( $_POST['schedspot_client_name'] ?? '' );
+
+            if ( empty( $guest_email ) || empty( $guest_name ) ) {
+                wp_die( __( 'Guest bookings require a valid name and email address.', 'schedspot' ) );
+            }
+
+            // Check if user exists with this email
+            $existing_user = get_user_by( 'email', $guest_email );
+            if ( $existing_user ) {
+                $user_id = $existing_user->ID;
+            } else {
+                // Create a temporary guest user ID (negative number to distinguish from real users)
+                $user_id = 0; // We'll handle guest bookings with user_id = 0
+                $is_guest = true;
+            }
         }
 
         // Sanitize and validate form data
@@ -537,6 +777,7 @@ class SchedSpot_Shortcodes {
             'client_lat'     => isset( $_POST['client_lat'] ) ? floatval( $_POST['client_lat'] ) : null,
             'client_lng'     => isset( $_POST['client_lng'] ) ? floatval( $_POST['client_lng'] ) : null,
             'notes'          => sanitize_textarea_field( $_POST['notes'] ),
+            'is_guest'       => $is_guest,
         );
 
         // Validate location if geofencing is enabled
@@ -1075,6 +1316,39 @@ class SchedSpot_Shortcodes {
     }
 
     /**
+     * Get messages URL.
+     *
+     * @since 1.0.0
+     * @return string Messages URL.
+     */
+    private function get_messages_url() {
+        // Try to find a page with the messages shortcode
+        $pages = get_posts( array(
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            's' => '[schedspot_messages]',
+            'numberposts' => 1
+        ) );
+
+        if ( ! empty( $pages ) ) {
+            return get_permalink( $pages[0]->ID );
+        }
+
+        return home_url( '/messages/' );
+    }
+
+    /**
+     * Get profile URL.
+     *
+     * @since 1.0.0
+     * @return string Profile URL.
+     */
+    private function get_profile_url() {
+        // For now, redirect to dashboard with profile tab
+        return $this->get_dashboard_url() . '#profile';
+    }
+
+    /**
      * Get role display name.
      *
      * @since 0.1.0
@@ -1133,13 +1407,16 @@ class SchedSpot_Shortcodes {
                             <div class="booking-time"><?php echo esc_html( date( 'g:i A', strtotime( $booking->start_time ) ) ); ?></div>
                             <div class="booking-status"><?php echo esc_html( ucfirst( $booking->status ) ); ?></div>
                             <div class="booking-cost">$<?php echo esc_html( number_format( $booking->total_cost, 2 ) ); ?></div>
-                            <?php if ( get_option( 'schedspot_enable_messaging', true ) ) : ?>
-                                <div class="booking-actions">
-                                    <button class="schedspot-btn schedspot-btn-small" onclick="messageWorker(<?php echo esc_attr( $booking->worker_id ); ?>, <?php echo esc_attr( $booking->id ); ?>)">
+                            <div class="booking-actions">
+                                <button class="schedspot-btn schedspot-btn-small view-booking-details" data-booking-id="<?php echo esc_attr( $booking->id ); ?>">
+                                    <?php _e( 'View Details', 'schedspot' ); ?>
+                                </button>
+                                <?php if ( get_option( 'schedspot_enable_messaging', true ) ) : ?>
+                                    <button class="schedspot-btn schedspot-btn-small schedspot-btn-secondary" onclick="messageWorker(<?php echo esc_attr( $booking->worker_id ); ?>, <?php echo esc_attr( $booking->id ); ?>)">
                                         <?php _e( 'Message Worker', 'schedspot' ); ?>
                                     </button>
-                                </div>
-                            <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -1226,8 +1503,22 @@ class SchedSpot_Shortcodes {
             <!-- Quick Actions -->
             <div class="schedspot-quick-actions">
                 <h4><?php _e( 'Quick Actions', 'schedspot' ); ?></h4>
+
+                <!-- Availability Status Display -->
+                <div class="availability-status-section">
+                    <div class="availability-status-display">
+                        <span class="availability-label"><?php _e( 'Current Status:', 'schedspot' ); ?></span>
+                        <span class="availability-status <?php echo $worker->profile['is_available'] ? 'available' : 'unavailable'; ?>" id="availability-status">
+                            <span class="status-indicator"></span>
+                            <span class="status-text"><?php echo $worker->profile['is_available'] ? __( 'Available', 'schedspot' ) : __( 'Unavailable', 'schedspot' ); ?></span>
+                        </span>
+                    </div>
+                </div>
+
                 <div class="action-buttons">
-                    <button class="schedspot-btn schedspot-btn-primary" onclick="toggleAvailability()"><?php _e( 'Toggle Availability', 'schedspot' ); ?></button>
+                    <button class="schedspot-btn schedspot-btn-primary availability-toggle" onclick="toggleAvailability()" id="availability-toggle-btn">
+                        <?php echo $worker->profile['is_available'] ? __( 'Set Unavailable', 'schedspot' ) : __( 'Set Available', 'schedspot' ); ?>
+                    </button>
                     <button class="schedspot-btn" onclick="openAvailabilityEditor()"><?php _e( 'Edit Schedule', 'schedspot' ); ?></button>
                     <button class="schedspot-btn" onclick="viewEarnings()"><?php _e( 'View Earnings', 'schedspot' ); ?></button>
                     <button class="schedspot-btn" onclick="manageProfile()"><?php _e( 'Manage Profile', 'schedspot' ); ?></button>
@@ -1321,14 +1612,22 @@ class SchedSpot_Shortcodes {
                                     <?php endif; ?>
                                 </div>
                                 <div class="booking-actions">
+                                    <button class="schedspot-btn schedspot-btn-small view-booking-details" data-booking-id="<?php echo esc_attr( $booking->id ); ?>">
+                                        <?php _e( 'View Details', 'schedspot' ); ?>
+                                    </button>
                                     <?php if ( $booking->status === 'pending' ) : ?>
-                                        <button class="schedspot-btn schedspot-btn-small" onclick="updateBookingStatus(<?php echo esc_attr( $booking->id ); ?>, 'confirmed')"><?php _e( 'Accept', 'schedspot' ); ?></button>
+                                        <button class="schedspot-btn schedspot-btn-small schedspot-btn-success" onclick="updateBookingStatus(<?php echo esc_attr( $booking->id ); ?>, 'confirmed')"><?php _e( 'Accept', 'schedspot' ); ?></button>
                                         <button class="schedspot-btn schedspot-btn-small schedspot-btn-secondary" onclick="updateBookingStatus(<?php echo esc_attr( $booking->id ); ?>, 'cancelled')"><?php _e( 'Decline', 'schedspot' ); ?></button>
                                     <?php elseif ( $booking->status === 'confirmed' ) : ?>
-                                        <button class="schedspot-btn schedspot-btn-small" onclick="updateBookingStatus(<?php echo esc_attr( $booking->id ); ?>, 'in_progress')"><?php _e( 'Start Job', 'schedspot' ); ?></button>
+                                        <button class="schedspot-btn schedspot-btn-small schedspot-btn-success" onclick="updateBookingStatus(<?php echo esc_attr( $booking->id ); ?>, 'in_progress')"><?php _e( 'Start Job', 'schedspot' ); ?></button>
+                                        <button class="schedspot-btn schedspot-btn-small schedspot-btn-success" onclick="requestDeposit(<?php echo esc_attr( $booking->id ); ?>)"><?php _e( 'Request Deposit', 'schedspot' ); ?></button>
                                         <button class="schedspot-btn schedspot-btn-small schedspot-btn-secondary" onclick="rescheduleBooking(<?php echo esc_attr( $booking->id ); ?>)"><?php _e( 'Reschedule', 'schedspot' ); ?></button>
                                     <?php elseif ( $booking->status === 'in_progress' ) : ?>
                                         <button class="schedspot-btn schedspot-btn-small" onclick="updateBookingStatus(<?php echo esc_attr( $booking->id ); ?>, 'completed')"><?php _e( 'Complete', 'schedspot' ); ?></button>
+                                        <button class="schedspot-btn schedspot-btn-small schedspot-btn-warning" onclick="requestProgress(<?php echo esc_attr( $booking->id ); ?>)"><?php _e( 'Request Progress Payment', 'schedspot' ); ?></button>
+                                    <?php elseif ( $booking->status === 'completed' ) : ?>
+                                        <button class="schedspot-btn schedspot-btn-small schedspot-btn-success" onclick="requestFinalPayment(<?php echo esc_attr( $booking->id ); ?>)"><?php _e( 'Request Final Payment', 'schedspot' ); ?></button>
+                                        <button class="schedspot-btn schedspot-btn-small schedspot-btn-link" onclick="generateInvoice(<?php echo esc_attr( $booking->id ); ?>)"><?php _e( 'Generate Invoice', 'schedspot' ); ?></button>
                                     <?php endif; ?>
                                     <?php if ( get_option( 'schedspot_enable_messaging', true ) ) : ?>
                                         <button class="schedspot-btn schedspot-btn-small schedspot-btn-link" onclick="messageClient(<?php echo esc_attr( $booking->user_id ); ?>, <?php echo esc_attr( $booking->id ); ?>)"><?php _e( 'Message', 'schedspot' ); ?></button>
@@ -1356,6 +1655,16 @@ class SchedSpot_Shortcodes {
         function toggleAvailability() {
             const restUrl = '<?php echo rest_url( 'schedspot/v1/workers/' . $user_id . '/profile' ); ?>';
             const nonce = '<?php echo wp_create_nonce( 'wp_rest' ); ?>';
+            const currentStatus = document.getElementById('availability-status').classList.contains('available');
+            const newStatus = !currentStatus;
+
+            // Update button state immediately for better UX
+            const toggleBtn = document.getElementById('availability-toggle-btn');
+            const statusElement = document.getElementById('availability-status');
+            const statusText = statusElement.querySelector('.status-text');
+
+            toggleBtn.disabled = true;
+            toggleBtn.textContent = '<?php _e( 'Updating...', 'schedspot' ); ?>';
 
             fetch(restUrl, {
                 method: 'PUT',
@@ -1364,16 +1673,64 @@ class SchedSpot_Shortcodes {
                     'X-WP-Nonce': nonce
                 },
                 body: JSON.stringify({
-                    is_available: <?php echo $worker->profile['is_available'] ? 'false' : 'true'; ?>
+                    is_available: newStatus
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.is_available !== undefined) {
-                    location.reload();
+                    // Update UI immediately without page reload
+                    if (data.is_available) {
+                        statusElement.className = 'availability-status available';
+                        statusText.textContent = '<?php _e( 'Available', 'schedspot' ); ?>';
+                        toggleBtn.textContent = '<?php _e( 'Set Unavailable', 'schedspot' ); ?>';
+                    } else {
+                        statusElement.className = 'availability-status unavailable';
+                        statusText.textContent = '<?php _e( 'Unavailable', 'schedspot' ); ?>';
+                        toggleBtn.textContent = '<?php _e( 'Set Available', 'schedspot' ); ?>';
+                    }
+
+                    // Show success message
+                    showNotification('<?php _e( 'Availability status updated successfully!', 'schedspot' ); ?>', 'success');
+                } else {
+                    throw new Error('Invalid response');
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('<?php _e( 'Failed to update availability status. Please try again.', 'schedspot' ); ?>', 'error');
+
+                // Reset button text on error
+                toggleBtn.textContent = currentStatus ? '<?php _e( 'Set Unavailable', 'schedspot' ); ?>' : '<?php _e( 'Set Available', 'schedspot' ); ?>';
+            })
+            .finally(() => {
+                toggleBtn.disabled = false;
+            });
+        }
+
+        function showNotification(message, type) {
+            // Remove existing notifications
+            const existingNotifications = document.querySelectorAll('.schedspot-notification');
+            existingNotifications.forEach(notification => notification.remove());
+
+            // Create new notification
+            const notification = document.createElement('div');
+            notification.className = `schedspot-notification ${type}`;
+            notification.innerHTML = `
+                <span class="notification-icon">${type === 'success' ? '✓' : '⚠'}</span>
+                <span class="notification-message">${message}</span>
+                <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+            `;
+
+            // Add to page
+            document.body.appendChild(notification);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
         }
 
         function updateBookingStatus(bookingId, status) {
@@ -1676,6 +2033,68 @@ class SchedSpot_Shortcodes {
             window.location.href = messagesUrl;
         }
 
+        function requestDeposit(bookingId) {
+            if (confirm('<?php _e( 'Send deposit request to client?', 'schedspot' ); ?>')) {
+                jQuery.post(ajaxurl, {
+                    action: 'schedspot_request_deposit',
+                    booking_id: bookingId,
+                    nonce: '<?php echo wp_create_nonce( 'schedspot_payment_request' ); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        showNotification('<?php _e( 'Deposit request sent to client.', 'schedspot' ); ?>', 'success');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        showNotification(response.data.message || '<?php _e( 'Error sending deposit request.', 'schedspot' ); ?>', 'error');
+                    }
+                });
+            }
+        }
+
+        function requestProgress(bookingId) {
+            if (confirm('<?php _e( 'Send progress payment request to client?', 'schedspot' ); ?>')) {
+                jQuery.post(ajaxurl, {
+                    action: 'schedspot_request_progress_payment',
+                    booking_id: bookingId,
+                    nonce: '<?php echo wp_create_nonce( 'schedspot_payment_request' ); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        showNotification('<?php _e( 'Progress payment request sent to client.', 'schedspot' ); ?>', 'success');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        showNotification(response.data.message || '<?php _e( 'Error sending payment request.', 'schedspot' ); ?>', 'error');
+                    }
+                });
+            }
+        }
+
+        function requestFinalPayment(bookingId) {
+            if (confirm('<?php _e( 'Send final payment request to client?', 'schedspot' ); ?>')) {
+                jQuery.post(ajaxurl, {
+                    action: 'schedspot_request_final_payment',
+                    booking_id: bookingId,
+                    nonce: '<?php echo wp_create_nonce( 'schedspot_payment_request' ); ?>'
+                }, function(response) {
+                    if (response.success) {
+                        showNotification('<?php _e( 'Final payment request sent to client.', 'schedspot' ); ?>', 'success');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        showNotification(response.data.message || '<?php _e( 'Error sending payment request.', 'schedspot' ); ?>', 'error');
+                    }
+                });
+            }
+        }
+
+        function generateInvoice(bookingId) {
+            var invoiceUrl = '<?php echo admin_url( 'admin-ajax.php' ); ?>?action=schedspot_generate_invoice&booking_id=' + bookingId + '&nonce=<?php echo wp_create_nonce( 'schedspot_invoice' ); ?>';
+            window.open(invoiceUrl, '_blank');
+        }
+
         // Enhanced Worker Settings Functions
         function openWorkerSettings() {
             document.getElementById('schedspot-worker-settings-modal').style.display = 'block';
@@ -1964,8 +2383,29 @@ class SchedSpot_Shortcodes {
         // Enqueue enhanced CSS file
         wp_enqueue_style( 'schedspot-frontend-enhanced', SCHEDSPOT_PLUGIN_URL . 'assets/css/frontend-enhanced.css', array(), SCHEDSPOT_VERSION );
 
-        // Add inline styles for compatibility
-        add_action( 'wp_footer', array( $this, 'output_booking_styles' ) );
+        // Enqueue frontend JavaScript
+        wp_enqueue_script( 'schedspot-frontend', SCHEDSPOT_PLUGIN_URL . 'assets/js/frontend.js', array( 'jquery' ), SCHEDSPOT_VERSION, true );
+
+        // Localize script with data
+        wp_localize_script( 'schedspot-frontend', 'schedspot_frontend', array(
+            'rest_url' => rest_url( 'schedspot/v1/' ),
+            'nonce' => wp_create_nonce( 'wp_rest' ),
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'default_avatar' => get_avatar_url( 0 ),
+            'strings' => array(
+                'any_worker' => __( 'Any available worker', 'schedspot' ),
+                'loading_workers' => __( 'Loading workers...', 'schedspot' ),
+                'error_loading_workers' => __( 'Error loading workers. Please try again.', 'schedspot' ),
+                'no_workers_available' => __( 'No workers available for this service.', 'schedspot' ),
+                'select_worker' => __( 'Select Worker', 'schedspot' ),
+                'error_checking_availability' => __( 'Error checking availability. Please try again.', 'schedspot' ),
+                'field_required' => __( 'This field is required.', 'schedspot' ),
+                'invalid_email' => __( 'Please enter a valid email address.', 'schedspot' ),
+                'processing' => __( 'Processing...', 'schedspot' ),
+                'submit_booking' => __( 'Submit Booking', 'schedspot' ),
+                'error_submitting_form' => __( 'Error submitting form. Please try again.', 'schedspot' ),
+            ),
+        ) );
 
         // Enqueue geolocation scripts if enabled
         if ( get_option( 'schedspot_enable_geofencing', false ) ) {
@@ -1975,82 +2415,14 @@ class SchedSpot_Shortcodes {
     }
 
     /**
-     * Output booking form styles.
+     * Output booking form styles (deprecated - styles moved to CSS file).
      *
      * @since 0.1.0
+     * @deprecated 1.0.0 Styles moved to frontend-enhanced.css
      */
     public function output_booking_styles() {
-        ?>
-        <style>
-        .schedspot-booking-form {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .schedspot-form-section {
-            margin-bottom: 30px;
-        }
-        .schedspot-form-section h3 {
-            margin-bottom: 15px;
-            color: #333;
-            border-bottom: 2px solid #0073aa;
-            padding-bottom: 5px;
-        }
-        .schedspot-form-row {
-            margin-bottom: 15px;
-        }
-        .schedspot-form-row label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .schedspot-form-row input,
-        .schedspot-form-row select,
-        .schedspot-form-row textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-        }
-        .schedspot-form-actions {
-            text-align: center;
-            margin-top: 30px;
-        }
-        .schedspot-btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #0073aa;
-            color: white;
-            text-decoration: none;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        .schedspot-btn:hover {
-            background: #005a87;
-        }
-        .schedspot-notice {
-            padding: 10px;
-            margin: 15px 0;
-            border-radius: 3px;
-        }
-        .schedspot-notice-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .schedspot-notice-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .required {
-            color: red;
-        }
-        </style>
-        <?php
+        // Styles have been moved to assets/css/frontend-enhanced.css
+        // This method is kept for backward compatibility
     }
 
     /**

@@ -215,12 +215,17 @@ class SchedSpot_Booking {
     public static function create_booking( $data ) {
         global $wpdb;
 
-        // Validate required fields
-        $required_fields = array( 'user_id', 'worker_id', 'booking_date', 'start_time', 'end_time', 'client_name', 'client_email' );
+        // Validate required fields (user_id can be 0 for guest bookings)
+        $required_fields = array( 'worker_id', 'booking_date', 'start_time', 'end_time', 'client_name', 'client_email' );
         foreach ( $required_fields as $field ) {
             if ( empty( $data[ $field ] ) ) {
                 return new WP_Error( 'missing_field', sprintf( __( 'Missing required field: %s', 'schedspot' ), $field ) );
             }
+        }
+
+        // For guest bookings, user_id can be 0
+        if ( ! isset( $data['user_id'] ) ) {
+            $data['user_id'] = 0;
         }
 
         // Check for booking conflicts

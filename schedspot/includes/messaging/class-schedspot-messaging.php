@@ -588,8 +588,8 @@ class SchedSpot_Messaging {
             ),
         ) );
 
-        // Enqueue messaging styles
-        wp_add_inline_style( 'wp-admin', $this->get_messaging_styles() );
+        // Enqueue messaging styles from CSS file
+        wp_enqueue_style( 'schedspot-frontend-enhanced', SCHEDSPOT_PLUGIN_URL . 'assets/css/frontend-enhanced.css', array(), SCHEDSPOT_VERSION );
     }
 
     /**

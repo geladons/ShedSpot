@@ -70,7 +70,7 @@ class SchedSpot_API {
             array(
                 'methods'             => WP_REST_Server::READABLE,
                 'callback'            => array( $this, 'get_booking' ),
-                'permission_callback' => array( $this, 'check_booking_permissions' ),
+                'permission_callback' => array( $this, 'check_booking_view_permissions' ),
                 'args'                => array(
                     'id' => array(
                         'validate_callback' => function( $param ) {
@@ -230,6 +230,25 @@ class SchedSpot_API {
             'callback'            => array( $this, 'update_payment_status' ),
             'permission_callback' => array( $this, 'check_admin_permissions' ),
             'args'                => $this->get_payment_status_args(),
+        ) );
+
+        register_rest_route( $this->namespace, '/payments/request-deposit', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'request_deposit' ),
+            'permission_callback' => array( $this, 'check_worker_payment_permissions' ),
+            'args'                => array(
+                'booking_id' => array( 'required' => true, 'sanitize_callback' => 'absint' ),
+                'amount'     => array( 'required' => false, 'sanitize_callback' => 'floatval' ),
+            ),
+        ) );
+
+        register_rest_route( $this->namespace, '/payments/send-invoice', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array( $this, 'send_invoice' ),
+            'permission_callback' => array( $this, 'check_worker_payment_permissions' ),
+            'args'                => array(
+                'booking_id' => array( 'required' => true, 'sanitize_callback' => 'absint' ),
+            ),
         ) );
 
         // Messaging endpoints
@@ -546,13 +565,13 @@ class SchedSpot_API {
     public function check_booking_permissions( $request ) {
         $booking_id = absint( $request['id'] );
         $booking = new SchedSpot_Booking( $booking_id );
-        
+
         if ( ! $booking->id ) {
             return false;
         }
 
         $current_user_id = get_current_user_id();
-        
+
         // Admin can access all bookings
         if ( current_user_can( 'manage_options' ) ) {
             return true;
@@ -562,6 +581,30 @@ class SchedSpot_API {
         if ( $booking->user_id === $current_user_id || $booking->worker_id === $current_user_id ) {
             return true;
         }
+
+    public function check_booking_view_permissions( $request ) {
+        // Allow viewing booking details for customers and workers
+        if ( ! is_user_logged_in() ) {
+            return false;
+        }
+
+        $booking_id = absint( $request['id'] );
+        $booking = new SchedSpot_Booking( $booking_id );
+
+        if ( ! $booking->id ) {
+            return false;
+        }
+
+        $current_user_id = get_current_user_id();
+
+        // Admin can access all bookings
+        if ( current_user_can( 'manage_options' ) ) {
+            return true;
+        }
+
+        // Users can view their own bookings (as customer or worker)
+        return $booking->user_id === $current_user_id || $booking->worker_id === $current_user_id;
+    }
 
         return false;
     }
@@ -683,6 +726,7 @@ class SchedSpot_API {
             'phone'             => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
             'address'           => array( 'required' => false, 'sanitize_callback' => 'sanitize_textarea_field' ),
             'experience_years'  => array( 'required' => false, 'sanitize_callback' => 'absint' ),
+            'is_available'      => array( 'required' => false, 'sanitize_callback' => 'rest_sanitize_boolean' ),
             'certifications'    => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
             'languages'         => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
             'availability_note' => array( 'required' => false, 'sanitize_callback' => 'sanitize_textarea_field' ),
@@ -1773,5 +1817,143 @@ class SchedSpot_API {
             'payout_email' => array( 'sanitize_callback' => 'sanitize_email' ),
             'tax_id' => array( 'sanitize_callback' => 'sanitize_text_field' ),
         );
+    }
+
+    /**
+     * Request deposit payment.
+     *
+     * @since 1.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function request_deposit( $request ) {
+        $params = $request->get_params();
+        $booking_id = absint( $params['booking_id'] );
+        $amount = isset( $params['amount'] ) ? floatval( $params['amount'] ) : 0;
+
+        $booking = new SchedSpot_Booking( $booking_id );
+        if ( ! $booking->id ) {
+            return new WP_Error( 'booking_not_found', __( 'Booking not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        // Check if current user is the worker for this booking
+        if ( $booking->worker_id !== get_current_user_id() && ! current_user_can( 'manage_options' ) ) {
+            return new WP_Error( 'permission_denied', __( 'You do not have permission to request deposit for this booking.', 'schedspot' ), array( 'status' => 403 ) );
+        }
+
+        // Calculate deposit amount if not provided (default to 50% of total cost)
+        if ( $amount <= 0 ) {
+            $amount = $booking->total_cost * 0.5;
+        }
+
+        // Update booking with deposit amount
+        $booking->update( array( 'deposit_amount' => $amount ) );
+
+        // Create WooCommerce order for deposit if WooCommerce integration is enabled
+        if ( class_exists( 'SchedSpot_WooCommerce' ) ) {
+            $wc_integration = new SchedSpot_WooCommerce();
+            $order_id = $wc_integration->create_deposit_order( $booking_id, $amount );
+
+            if ( ! is_wp_error( $order_id ) ) {
+                update_post_meta( $booking_id, 'schedspot_deposit_order_id', $order_id );
+            }
+        }
+
+        // Send notification to customer
+        $customer = get_userdata( $booking->user_id );
+        if ( $customer ) {
+            $subject = sprintf( __( 'Deposit Request for Booking #%d', 'schedspot' ), $booking_id );
+            $message = sprintf(
+                __( 'A deposit of $%.2f has been requested for your booking. Please log in to your account to make the payment.', 'schedspot' ),
+                $amount
+            );
+            wp_mail( $customer->user_email, $subject, $message );
+        }
+
+        return rest_ensure_response( array(
+            'success' => true,
+            'message' => __( 'Deposit request sent successfully.', 'schedspot' ),
+            'deposit_amount' => $amount,
+        ) );
+    }
+
+    /**
+     * Send invoice to customer.
+     *
+     * @since 1.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return WP_REST_Response|WP_Error Response object or error.
+     */
+    public function send_invoice( $request ) {
+        $params = $request->get_params();
+        $booking_id = absint( $params['booking_id'] );
+
+        $booking = new SchedSpot_Booking( $booking_id );
+        if ( ! $booking->id ) {
+            return new WP_Error( 'booking_not_found', __( 'Booking not found.', 'schedspot' ), array( 'status' => 404 ) );
+        }
+
+        // Check if current user is the worker for this booking
+        if ( $booking->worker_id !== get_current_user_id() && ! current_user_can( 'manage_options' ) ) {
+            return new WP_Error( 'permission_denied', __( 'You do not have permission to send invoice for this booking.', 'schedspot' ), array( 'status' => 403 ) );
+        }
+
+        // Calculate remaining amount (total - deposit)
+        $remaining_amount = $booking->total_cost - $booking->deposit_amount;
+
+        // Create WooCommerce order for remaining amount if WooCommerce integration is enabled
+        if ( class_exists( 'SchedSpot_WooCommerce' ) && $remaining_amount > 0 ) {
+            $wc_integration = new SchedSpot_WooCommerce();
+            $order_id = $wc_integration->create_final_payment_order( $booking_id, $remaining_amount );
+
+            if ( ! is_wp_error( $order_id ) ) {
+                update_post_meta( $booking_id, 'schedspot_final_order_id', $order_id );
+            }
+        }
+
+        // Send invoice email to customer
+        $customer = get_userdata( $booking->user_id );
+        if ( $customer ) {
+            $subject = sprintf( __( 'Invoice for Booking #%d', 'schedspot' ), $booking_id );
+            $message = sprintf(
+                __( 'Your service has been completed. The total amount due is $%.2f. Please log in to your account to make the payment.', 'schedspot' ),
+                $remaining_amount > 0 ? $remaining_amount : $booking->total_cost
+            );
+            wp_mail( $customer->user_email, $subject, $message );
+        }
+
+        return rest_ensure_response( array(
+            'success' => true,
+            'message' => __( 'Invoice sent successfully.', 'schedspot' ),
+            'invoice_amount' => $remaining_amount > 0 ? $remaining_amount : $booking->total_cost,
+        ) );
+    }
+
+    /**
+     * Check worker payment permissions.
+     *
+     * @since 1.0.0
+     * @param WP_REST_Request $request Request object.
+     * @return bool True if user has permission, false otherwise.
+     */
+    public function check_worker_payment_permissions( $request ) {
+        if ( current_user_can( 'manage_options' ) ) {
+            return true;
+        }
+
+        $params = $request->get_params();
+        $booking_id = absint( $params['booking_id'] );
+
+        if ( ! $booking_id ) {
+            return false;
+        }
+
+        $booking = new SchedSpot_Booking( $booking_id );
+        if ( ! $booking->id ) {
+            return false;
+        }
+
+        // Only the worker assigned to this booking can request payments
+        return $booking->worker_id === get_current_user_id();
     }
 }

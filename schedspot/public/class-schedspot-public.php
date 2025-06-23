@@ -51,12 +51,38 @@ class SchedSpot_Public {
         // Only enqueue on pages that contain SchedSpot shortcodes
         if ( $this->has_schedspot_shortcode() ) {
             wp_enqueue_script( 'jquery' );
-            
-            // Add inline JavaScript for basic functionality
+
+            // Enqueue main frontend CSS
+            wp_enqueue_style( 'schedspot-frontend-enhanced', SCHEDSPOT_PLUGIN_URL . 'assets/css/frontend-enhanced.css', array(), SCHEDSPOT_VERSION );
+
+            // Enqueue main frontend JavaScript
+            wp_enqueue_script( 'schedspot-frontend', SCHEDSPOT_PLUGIN_URL . 'assets/js/frontend.js', array( 'jquery' ), SCHEDSPOT_VERSION, true );
+
+            // Localize script with data
+            wp_localize_script( 'schedspot-frontend', 'schedspot_frontend', array(
+                'rest_url' => rest_url( 'schedspot/v1/' ),
+                'nonce' => wp_create_nonce( 'wp_rest' ),
+                'ajax_url' => admin_url( 'admin-ajax.php' ),
+                'default_avatar' => get_avatar_url( 0 ),
+                'current_user_id' => get_current_user_id(),
+                'payment_url' => home_url( '/checkout/' ), // WooCommerce checkout URL
+                'strings' => array(
+                    'any_worker' => __( 'Any available worker', 'schedspot' ),
+                    'loading_workers' => __( 'Loading workers...', 'schedspot' ),
+                    'error_loading_workers' => __( 'Error loading workers. Please try again.', 'schedspot' ),
+                    'no_workers_available' => __( 'No workers available for this service.', 'schedspot' ),
+                    'select_worker' => __( 'Select Worker', 'schedspot' ),
+                    'error_checking_availability' => __( 'Error checking availability. Please try again.', 'schedspot' ),
+                    'field_required' => __( 'This field is required.', 'schedspot' ),
+                    'invalid_email' => __( 'Please enter a valid email address.', 'schedspot' ),
+                    'processing' => __( 'Processing...', 'schedspot' ),
+                    'submit_booking' => __( 'Submit Booking', 'schedspot' ),
+                    'error_submitting_form' => __( 'Error submitting form. Please try again.', 'schedspot' ),
+                ),
+            ) );
+
+            // Add legacy inline JavaScript for backward compatibility
             wp_add_inline_script( 'jquery', $this->get_inline_javascript() );
-            
-            // Add inline CSS for public styles
-            wp_add_inline_style( 'wp-block-library', $this->get_public_styles() );
         }
     }
 
@@ -77,6 +103,7 @@ class SchedSpot_Public {
             'schedspot_booking_form',
             'schedspot_service_list',
             'schedspot_dashboard',
+            'schedspot_messages',
         );
         
         foreach ( $shortcodes as $shortcode ) {
