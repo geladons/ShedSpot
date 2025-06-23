@@ -292,6 +292,9 @@ CREATE TABLE {$wpdb->prefix}schedspot_messages (
                 'schedspot_create_booking' => true,
                 'schedspot_view_own_bookings' => true,
                 'schedspot_cancel_own_booking' => true,
+                'schedspot_send_messages' => true,
+                'schedspot_read_messages' => true,
+                'schedspot_manage_profile' => true,
             )
         );
 
@@ -308,6 +311,9 @@ CREATE TABLE {$wpdb->prefix}schedspot_messages (
                 'schedspot_complete_booking'  => true,
                 'schedspot_manage_availability' => true,
                 'schedspot_manage_services'   => true,
+                'schedspot_send_messages' => true,
+                'schedspot_read_messages' => true,
+                'schedspot_manage_profile' => true,
             )
         );
 
@@ -350,6 +356,16 @@ CREATE TABLE {$wpdb->prefix}schedspot_messages (
                 'name'    => _x( 'my-account', 'Page slug', 'schedspot' ),
                 'title'   => _x( 'My Account', 'Page title', 'schedspot' ),
                 'content' => '[schedspot_dashboard]',
+            ),
+            'schedspot_messages_page' => array(
+                'name'    => _x( 'messages', 'Page slug', 'schedspot' ),
+                'title'   => _x( 'Messages', 'Page title', 'schedspot' ),
+                'content' => '[schedspot_messages]',
+            ),
+            'schedspot_profile_page' => array(
+                'name'    => _x( 'profile', 'Page slug', 'schedspot' ),
+                'title'   => _x( 'Profile & Settings', 'Page title', 'schedspot' ),
+                'content' => '[schedspot_profile]',
             ),
         );
 

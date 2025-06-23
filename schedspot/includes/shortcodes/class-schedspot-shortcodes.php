@@ -39,6 +39,7 @@ class SchedSpot_Shortcodes {
             'schedspot_service_list' => 'service_list',
             'schedspot_dashboard'    => 'dashboard',
             'schedspot_messages'     => 'messages',
+            'schedspot_profile'      => 'profile',
         );
 
         foreach ( $shortcodes as $shortcode => $function ) {
@@ -47,6 +48,9 @@ class SchedSpot_Shortcodes {
 
         // Hook to mark pages with shortcodes for navigation
         add_action( 'save_post', array( $this, 'mark_pages_with_shortcodes' ) );
+
+        // Hook to create missing pages if needed
+        add_action( 'init', array( $this, 'maybe_create_missing_pages' ) );
     }
 
     /**
@@ -74,6 +78,20 @@ class SchedSpot_Shortcodes {
             update_post_meta( $post_id, '_schedspot_has_dashboard', '1' );
         } else {
             delete_post_meta( $post_id, '_schedspot_has_dashboard' );
+        }
+
+        // Check for messages shortcode
+        if ( has_shortcode( $content, 'schedspot_messages' ) ) {
+            update_post_meta( $post_id, '_schedspot_has_messages', '1' );
+        } else {
+            delete_post_meta( $post_id, '_schedspot_has_messages' );
+        }
+
+        // Check for profile shortcode
+        if ( has_shortcode( $content, 'schedspot_profile' ) ) {
+            update_post_meta( $post_id, '_schedspot_has_profile', '1' );
+        } else {
+            delete_post_meta( $post_id, '_schedspot_has_profile' );
         }
     }
 
@@ -1334,7 +1352,26 @@ class SchedSpot_Shortcodes {
             return get_permalink( $pages[0]->ID );
         }
 
-        return home_url( '/messages/' );
+        // Try to find any page with messages shortcode in content
+        $pages = get_posts( array(
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            'meta_query' => array(
+                array(
+                    'key' => '_schedspot_has_messages',
+                    'value' => '1',
+                    'compare' => '='
+                )
+            ),
+            'numberposts' => 1
+        ) );
+
+        if ( ! empty( $pages ) ) {
+            return get_permalink( $pages[0]->ID );
+        }
+
+        // Fallback: create a virtual messages page URL
+        return home_url( '?schedspot_action=messages' );
     }
 
     /**
@@ -1344,7 +1381,19 @@ class SchedSpot_Shortcodes {
      * @return string Profile URL.
      */
     private function get_profile_url() {
-        // For now, redirect to dashboard with profile tab
+        // Try to find a page with profile shortcode or create a profile section
+        $pages = get_posts( array(
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            's' => '[schedspot_profile]',
+            'numberposts' => 1
+        ) );
+
+        if ( ! empty( $pages ) ) {
+            return get_permalink( $pages[0]->ID );
+        }
+
+        // Fallback: redirect to dashboard with profile tab
         return $this->get_dashboard_url() . '#profile';
     }
 
@@ -2808,5 +2857,662 @@ class SchedSpot_Shortcodes {
         <?php
 
         return ob_get_clean();
+    }
+
+    /**
+     * Profile shortcode.
+     *
+     * @since 1.0.0
+     * @param array $atts Shortcode attributes.
+     * @return string HTML output.
+     */
+    public function profile( $atts ) {
+        $atts = shortcode_atts( array(
+            'class' => 'schedspot-profile',
+        ), $atts, 'schedspot_profile' );
+
+        if ( ! is_user_logged_in() ) {
+            return '<p>' . __( 'Please log in to access your profile.', 'schedspot' ) . '</p>';
+        }
+
+        ob_start();
+
+        $current_user = wp_get_current_user();
+        $user_role = SchedSpot()->get_effective_user_role();
+
+        // Enqueue necessary scripts and styles
+        $this->enqueue_dashboard_assets();
+
+        // Handle form submissions
+        $this->handle_profile_form_submissions();
+
+        ?>
+        <div class="<?php echo esc_attr( $atts['class'] ); ?>">
+            <!-- Navigation Bar -->
+            <div class="schedspot-navigation">
+                <div class="schedspot-nav-links">
+                    <a href="<?php echo esc_url( $this->get_booking_form_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-calendar-alt"></span>
+                        <?php _e( 'Book a Service', 'schedspot' ); ?>
+                    </a>
+                    <a href="<?php echo esc_url( $this->get_dashboard_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-list-view"></span>
+                        <?php _e( 'My Bookings', 'schedspot' ); ?>
+                    </a>
+                    <?php if ( get_option( 'schedspot_enable_messaging', true ) ) : ?>
+                    <a href="<?php echo esc_url( $this->get_messages_url() ); ?>" class="schedspot-nav-link">
+                        <span class="dashicons dashicons-email-alt"></span>
+                        <?php _e( 'Messages', 'schedspot' ); ?>
+                    </a>
+                    <?php endif; ?>
+                    <a href="<?php echo esc_url( $this->get_profile_url() ); ?>" class="schedspot-nav-link active">
+                        <span class="dashicons dashicons-admin-users"></span>
+                        <?php _e( 'Profile/Settings', 'schedspot' ); ?>
+                    </a>
+                    <?php if ( current_user_can( 'manage_options' ) ) : ?>
+                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-role-switcher' ); ?>" class="schedspot-nav-link admin-switcher">
+                        <span class="dashicons dashicons-admin-settings"></span>
+                        <?php printf( __( 'Admin: %s', 'schedspot' ), $this->get_role_display_name( $user_role ) ); ?>
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="schedspot-profile-content">
+                <div class="schedspot-profile-header">
+                    <h2><?php _e( 'Profile & Settings', 'schedspot' ); ?></h2>
+                    <p><?php _e( 'Manage your account information and preferences.', 'schedspot' ); ?></p>
+                </div>
+
+                <div class="schedspot-profile-tabs">
+                    <div class="tab-nav">
+                        <button class="tab-button active" data-tab="general"><?php _e( 'General', 'schedspot' ); ?></button>
+                        <?php if ( $user_role === 'schedspot_worker' ) : ?>
+                        <button class="tab-button" data-tab="worker"><?php _e( 'Worker Profile', 'schedspot' ); ?></button>
+                        <?php endif; ?>
+                        <button class="tab-button" data-tab="notifications"><?php _e( 'Notifications', 'schedspot' ); ?></button>
+                        <button class="tab-button" data-tab="privacy"><?php _e( 'Privacy', 'schedspot' ); ?></button>
+                    </div>
+
+                    <div class="tab-content">
+                        <!-- General Tab -->
+                        <div class="tab-panel active" id="general-tab">
+                            <?php $this->render_general_profile_tab( $current_user ); ?>
+                        </div>
+
+                        <?php if ( $user_role === 'schedspot_worker' ) : ?>
+                        <!-- Worker Profile Tab -->
+                        <div class="tab-panel" id="worker-tab">
+                            <?php $this->render_worker_profile_tab( $current_user->ID ); ?>
+                        </div>
+                        <?php endif; ?>
+
+                        <!-- Notifications Tab -->
+                        <div class="tab-panel" id="notifications-tab">
+                            <?php $this->render_notifications_tab( $current_user->ID ); ?>
+                        </div>
+
+                        <!-- Privacy Tab -->
+                        <div class="tab-panel" id="privacy-tab">
+                            <?php $this->render_privacy_tab( $current_user->ID ); ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            // Tab switching functionality
+            $('.tab-button').on('click', function() {
+                var tabId = $(this).data('tab');
+
+                // Update active tab button
+                $('.tab-button').removeClass('active');
+                $(this).addClass('active');
+
+                // Update active tab panel
+                $('.tab-panel').removeClass('active');
+                $('#' + tabId + '-tab').addClass('active');
+            });
+        });
+        </script>
+
+        <style>
+        .schedspot-profile-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .schedspot-profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .schedspot-profile-header h2 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .schedspot-profile-tabs {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .tab-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #0073aa;
+            border-bottom: 2px solid #0073aa;
+        }
+
+        .tab-content {
+            padding: 30px;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .tab-nav {
+                flex-direction: column;
+            }
+
+            .tab-button {
+                text-align: left;
+            }
+        }
+        </style>
+        <?php
+
+        return ob_get_clean();
+    }
+
+    /**
+     * Render general profile tab.
+     *
+     * @since 1.0.0
+     * @param WP_User $user User object.
+     */
+    private function render_general_profile_tab( $user ) {
+        ?>
+        <form method="post" action="" class="schedspot-profile-form">
+            <?php wp_nonce_field( 'schedspot_update_profile', 'schedspot_profile_nonce' ); ?>
+
+            <div class="form-group">
+                <label for="display_name"><?php _e( 'Display Name', 'schedspot' ); ?></label>
+                <input type="text" id="display_name" name="display_name" value="<?php echo esc_attr( $user->display_name ); ?>" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="user_email"><?php _e( 'Email Address', 'schedspot' ); ?></label>
+                <input type="email" id="user_email" name="user_email" value="<?php echo esc_attr( $user->user_email ); ?>" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="first_name"><?php _e( 'First Name', 'schedspot' ); ?></label>
+                <input type="text" id="first_name" name="first_name" value="<?php echo esc_attr( $user->first_name ); ?>" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="last_name"><?php _e( 'Last Name', 'schedspot' ); ?></label>
+                <input type="text" id="last_name" name="last_name" value="<?php echo esc_attr( $user->last_name ); ?>" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="phone"><?php _e( 'Phone Number', 'schedspot' ); ?></label>
+                <input type="tel" id="phone" name="phone" value="<?php echo esc_attr( get_user_meta( $user->ID, 'phone', true ) ); ?>" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="description"><?php _e( 'Bio/Description', 'schedspot' ); ?></label>
+                <textarea id="description" name="description" rows="4" class="form-control"><?php echo esc_textarea( $user->description ); ?></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" name="update_general_profile" class="schedspot-btn schedspot-btn-primary">
+                    <?php _e( 'Update Profile', 'schedspot' ); ?>
+                </button>
+            </div>
+        </form>
+        <?php
+    }
+
+    /**
+     * Render worker profile tab.
+     *
+     * @since 1.0.0
+     * @param int $user_id User ID.
+     */
+    private function render_worker_profile_tab( $user_id ) {
+        $worker = new SchedSpot_Worker( $user_id );
+        ?>
+        <form method="post" action="" class="schedspot-profile-form">
+            <?php wp_nonce_field( 'schedspot_update_worker_profile', 'schedspot_worker_profile_nonce' ); ?>
+
+            <div class="form-group">
+                <label for="hourly_rate"><?php _e( 'Hourly Rate ($)', 'schedspot' ); ?></label>
+                <input type="number" id="hourly_rate" name="hourly_rate" value="<?php echo esc_attr( $worker->hourly_rate ); ?>" class="form-control" step="0.01" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="skills"><?php _e( 'Skills', 'schedspot' ); ?></label>
+                <input type="text" id="skills" name="skills" value="<?php echo esc_attr( $worker->skills ); ?>" class="form-control" placeholder="<?php esc_attr_e( 'e.g., Plumbing, Electrical, Carpentry', 'schedspot' ); ?>">
+                <small class="form-text"><?php _e( 'Separate multiple skills with commas', 'schedspot' ); ?></small>
+            </div>
+
+            <div class="form-group">
+                <label for="experience_years"><?php _e( 'Years of Experience', 'schedspot' ); ?></label>
+                <input type="number" id="experience_years" name="experience_years" value="<?php echo esc_attr( $worker->experience_years ); ?>" class="form-control" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="certifications"><?php _e( 'Certifications', 'schedspot' ); ?></label>
+                <textarea id="certifications" name="certifications" rows="3" class="form-control" placeholder="<?php esc_attr_e( 'List your professional certifications', 'schedspot' ); ?>"><?php echo esc_textarea( $worker->certifications ); ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="languages"><?php _e( 'Languages Spoken', 'schedspot' ); ?></label>
+                <input type="text" id="languages" name="languages" value="<?php echo esc_attr( $worker->languages ); ?>" class="form-control" placeholder="<?php esc_attr_e( 'e.g., English, Spanish, French', 'schedspot' ); ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="service_areas"><?php _e( 'Service Areas', 'schedspot' ); ?></label>
+                <input type="text" id="service_areas" name="service_areas" value="<?php echo esc_attr( $worker->service_areas ); ?>" class="form-control" placeholder="<?php esc_attr_e( 'Areas you serve (e.g., Downtown, North Side)', 'schedspot' ); ?>">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="is_available" value="1" <?php checked( $worker->is_available, 1 ); ?>>
+                    <?php _e( 'Currently Available for New Bookings', 'schedspot' ); ?>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" name="update_worker_profile" class="schedspot-btn schedspot-btn-primary">
+                    <?php _e( 'Update Worker Profile', 'schedspot' ); ?>
+                </button>
+            </div>
+        </form>
+        <?php
+    }
+
+    /**
+     * Render notifications tab.
+     *
+     * @since 1.0.0
+     * @param int $user_id User ID.
+     */
+    private function render_notifications_tab( $user_id ) {
+        $email_notifications = get_user_meta( $user_id, 'schedspot_email_notifications', true );
+        $sms_notifications = get_user_meta( $user_id, 'schedspot_sms_notifications', true );
+
+        // Default to enabled if not set
+        if ( $email_notifications === '' ) {
+            $email_notifications = 1;
+        }
+        if ( $sms_notifications === '' ) {
+            $sms_notifications = 1;
+        }
+        ?>
+        <form method="post" action="" class="schedspot-profile-form">
+            <?php wp_nonce_field( 'schedspot_update_notifications', 'schedspot_notifications_nonce' ); ?>
+
+            <h4><?php _e( 'Email Notifications', 'schedspot' ); ?></h4>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="email_booking_confirmed" value="1" <?php checked( get_user_meta( $user_id, 'schedspot_email_booking_confirmed', true ), 1 ); ?>>
+                    <?php _e( 'Booking Confirmations', 'schedspot' ); ?>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="email_booking_reminders" value="1" <?php checked( get_user_meta( $user_id, 'schedspot_email_booking_reminders', true ), 1 ); ?>>
+                    <?php _e( 'Booking Reminders', 'schedspot' ); ?>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="email_new_messages" value="1" <?php checked( get_user_meta( $user_id, 'schedspot_email_new_messages', true ), 1 ); ?>>
+                    <?php _e( 'New Messages', 'schedspot' ); ?>
+                </label>
+            </div>
+
+            <?php if ( get_option( 'schedspot_sms_enabled', false ) ) : ?>
+            <h4><?php _e( 'SMS Notifications', 'schedspot' ); ?></h4>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="sms_booking_confirmed" value="1" <?php checked( get_user_meta( $user_id, 'schedspot_sms_booking_confirmed', true ), 1 ); ?>>
+                    <?php _e( 'Booking Confirmations', 'schedspot' ); ?>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="sms_booking_reminders" value="1" <?php checked( get_user_meta( $user_id, 'schedspot_sms_booking_reminders', true ), 1 ); ?>>
+                    <?php _e( 'Booking Reminders', 'schedspot' ); ?>
+                </label>
+            </div>
+            <?php endif; ?>
+
+            <div class="form-actions">
+                <button type="submit" name="update_notifications" class="schedspot-btn schedspot-btn-primary">
+                    <?php _e( 'Update Notification Preferences', 'schedspot' ); ?>
+                </button>
+            </div>
+        </form>
+        <?php
+    }
+
+    /**
+     * Render privacy tab.
+     *
+     * @since 1.0.0
+     * @param int $user_id User ID.
+     */
+    private function render_privacy_tab( $user_id ) {
+        ?>
+        <form method="post" action="" class="schedspot-profile-form">
+            <?php wp_nonce_field( 'schedspot_update_privacy', 'schedspot_privacy_nonce' ); ?>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="profile_public" value="1" <?php checked( get_user_meta( $user_id, 'schedspot_profile_public', true ), 1 ); ?>>
+                    <?php _e( 'Make my profile visible to other users', 'schedspot' ); ?>
+                </label>
+                <small class="form-text"><?php _e( 'When enabled, other users can see your basic profile information', 'schedspot' ); ?></small>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="show_contact_info" value="1" <?php checked( get_user_meta( $user_id, 'schedspot_show_contact_info', true ), 1 ); ?>>
+                    <?php _e( 'Show contact information in profile', 'schedspot' ); ?>
+                </label>
+                <small class="form-text"><?php _e( 'Allow other users to see your phone number and email', 'schedspot' ); ?></small>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="allow_direct_booking" value="1" <?php checked( get_user_meta( $user_id, 'schedspot_allow_direct_booking', true ), 1 ); ?>>
+                    <?php _e( 'Allow direct booking without approval', 'schedspot' ); ?>
+                </label>
+                <small class="form-text"><?php _e( 'When disabled, you must approve each booking request', 'schedspot' ); ?></small>
+            </div>
+
+            <h4><?php _e( 'Data Management', 'schedspot' ); ?></h4>
+            <div class="form-group">
+                <p><?php _e( 'You can request a copy of your personal data or request deletion of your account.', 'schedspot' ); ?></p>
+                <div class="data-actions">
+                    <button type="button" class="schedspot-btn schedspot-btn-secondary" onclick="requestDataExport()">
+                        <?php _e( 'Export My Data', 'schedspot' ); ?>
+                    </button>
+                    <button type="button" class="schedspot-btn schedspot-btn-danger" onclick="requestAccountDeletion()">
+                        <?php _e( 'Delete My Account', 'schedspot' ); ?>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" name="update_privacy" class="schedspot-btn schedspot-btn-primary">
+                    <?php _e( 'Update Privacy Settings', 'schedspot' ); ?>
+                </button>
+            </div>
+        </form>
+
+        <script>
+        function requestDataExport() {
+            if (confirm('<?php _e( 'Request a copy of your personal data? You will receive an email with download instructions.', 'schedspot' ); ?>')) {
+                // AJAX call to request data export
+                fetch('<?php echo rest_url( 'schedspot/v1/users/export-data' ); ?>', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('<?php _e( 'Data export request submitted. You will receive an email shortly.', 'schedspot' ); ?>');
+                    } else {
+                        alert('<?php _e( 'Error processing request. Please try again.', 'schedspot' ); ?>');
+                    }
+                });
+            }
+        }
+
+        function requestAccountDeletion() {
+            if (confirm('<?php _e( 'Are you sure you want to delete your account? This action cannot be undone.', 'schedspot' ); ?>')) {
+                if (confirm('<?php _e( 'This will permanently delete all your data including bookings and messages. Continue?', 'schedspot' ); ?>')) {
+                    // AJAX call to request account deletion
+                    fetch('<?php echo rest_url( 'schedspot/v1/users/delete-account' ); ?>', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('<?php _e( 'Account deletion request submitted. You will be logged out shortly.', 'schedspot' ); ?>');
+                            window.location.href = '<?php echo wp_logout_url( home_url() ); ?>';
+                        } else {
+                            alert('<?php _e( 'Error processing request. Please contact support.', 'schedspot' ); ?>');
+                        }
+                    });
+                }
+            }
+        }
+        </script>
+        <?php
+    }
+
+    /**
+     * Maybe create missing pages for SchedSpot shortcodes.
+     *
+     * @since 1.0.0
+     */
+    public function maybe_create_missing_pages() {
+        // Only run this once per day to avoid performance issues
+        if ( get_transient( 'schedspot_pages_checked' ) ) {
+            return;
+        }
+
+        $required_pages = array(
+            'messages' => array(
+                'title' => __( 'Messages', 'schedspot' ),
+                'content' => '[schedspot_messages]',
+                'option' => 'schedspot_messages_page',
+            ),
+            'profile' => array(
+                'title' => __( 'Profile & Settings', 'schedspot' ),
+                'content' => '[schedspot_profile]',
+                'option' => 'schedspot_profile_page',
+            ),
+        );
+
+        foreach ( $required_pages as $slug => $page_data ) {
+            $this->create_page_if_missing( $slug, $page_data );
+        }
+
+        // Set transient to avoid checking again for 24 hours
+        set_transient( 'schedspot_pages_checked', true, DAY_IN_SECONDS );
+    }
+
+    /**
+     * Create a page if it doesn't exist.
+     *
+     * @since 1.0.0
+     * @param string $slug Page slug.
+     * @param array $page_data Page data.
+     */
+    private function create_page_if_missing( $slug, $page_data ) {
+        // Check if page already exists
+        $existing_page = get_posts( array(
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            's' => $page_data['content'],
+            'numberposts' => 1
+        ) );
+
+        if ( ! empty( $existing_page ) ) {
+            // Page exists, update option if needed
+            if ( isset( $page_data['option'] ) ) {
+                update_option( $page_data['option'], $existing_page[0]->ID );
+            }
+            return;
+        }
+
+        // Create the page
+        $page_id = wp_insert_post( array(
+            'post_title' => $page_data['title'],
+            'post_content' => $page_data['content'],
+            'post_status' => 'publish',
+            'post_type' => 'page',
+            'post_name' => $slug,
+            'comment_status' => 'closed',
+            'ping_status' => 'closed',
+        ) );
+
+        if ( $page_id && ! is_wp_error( $page_id ) ) {
+            // Update option with page ID
+            if ( isset( $page_data['option'] ) ) {
+                update_option( $page_data['option'], $page_id );
+            }
+
+            // Mark page with shortcode meta
+            if ( $page_data['content'] === '[schedspot_messages]' ) {
+                update_post_meta( $page_id, '_schedspot_has_messages', '1' );
+            } elseif ( $page_data['content'] === '[schedspot_profile]' ) {
+                update_post_meta( $page_id, '_schedspot_has_profile', '1' );
+            }
+        }
+    }
+
+    /**
+     * Handle profile form submissions.
+     *
+     * @since 1.0.0
+     */
+    private function handle_profile_form_submissions() {
+        if ( ! is_user_logged_in() ) {
+            return;
+        }
+
+        $current_user_id = get_current_user_id();
+
+        // Handle general profile update
+        if ( isset( $_POST['update_general_profile'] ) && wp_verify_nonce( $_POST['schedspot_profile_nonce'], 'schedspot_update_profile' ) ) {
+            $user_data = array(
+                'ID' => $current_user_id,
+                'display_name' => sanitize_text_field( $_POST['display_name'] ),
+                'user_email' => sanitize_email( $_POST['user_email'] ),
+                'first_name' => sanitize_text_field( $_POST['first_name'] ),
+                'last_name' => sanitize_text_field( $_POST['last_name'] ),
+                'description' => sanitize_textarea_field( $_POST['description'] ),
+            );
+
+            $result = wp_update_user( $user_data );
+
+            if ( ! is_wp_error( $result ) ) {
+                // Update phone number
+                if ( isset( $_POST['phone'] ) ) {
+                    update_user_meta( $current_user_id, 'phone', sanitize_text_field( $_POST['phone'] ) );
+                }
+
+                echo '<div class="schedspot-notice schedspot-notice-success">' . __( 'Profile updated successfully.', 'schedspot' ) . '</div>';
+            } else {
+                echo '<div class="schedspot-notice schedspot-notice-error">' . __( 'Error updating profile.', 'schedspot' ) . '</div>';
+            }
+        }
+
+        // Handle worker profile update
+        if ( isset( $_POST['update_worker_profile'] ) && wp_verify_nonce( $_POST['schedspot_worker_profile_nonce'], 'schedspot_update_worker_profile' ) ) {
+            $worker = new SchedSpot_Worker( $current_user_id );
+
+            $worker_data = array(
+                'hourly_rate' => floatval( $_POST['hourly_rate'] ),
+                'skills' => sanitize_text_field( $_POST['skills'] ),
+                'experience_years' => absint( $_POST['experience_years'] ),
+                'certifications' => sanitize_textarea_field( $_POST['certifications'] ),
+                'languages' => sanitize_text_field( $_POST['languages'] ),
+                'service_areas' => sanitize_text_field( $_POST['service_areas'] ),
+                'is_available' => isset( $_POST['is_available'] ) ? 1 : 0,
+            );
+
+            $result = $worker->update( $worker_data );
+
+            if ( $result ) {
+                echo '<div class="schedspot-notice schedspot-notice-success">' . __( 'Worker profile updated successfully.', 'schedspot' ) . '</div>';
+            } else {
+                echo '<div class="schedspot-notice schedspot-notice-error">' . __( 'Error updating worker profile.', 'schedspot' ) . '</div>';
+            }
+        }
+
+        // Handle notifications update
+        if ( isset( $_POST['update_notifications'] ) && wp_verify_nonce( $_POST['schedspot_notifications_nonce'], 'schedspot_update_notifications' ) ) {
+            $notification_fields = array(
+                'email_booking_confirmed',
+                'email_booking_reminders',
+                'email_new_messages',
+                'sms_booking_confirmed',
+                'sms_booking_reminders',
+            );
+
+            foreach ( $notification_fields as $field ) {
+                $value = isset( $_POST[ $field ] ) ? 1 : 0;
+                update_user_meta( $current_user_id, 'schedspot_' . $field, $value );
+            }
+
+            echo '<div class="schedspot-notice schedspot-notice-success">' . __( 'Notification preferences updated successfully.', 'schedspot' ) . '</div>';
+        }
+
+        // Handle privacy settings update
+        if ( isset( $_POST['update_privacy'] ) && wp_verify_nonce( $_POST['schedspot_privacy_nonce'], 'schedspot_update_privacy' ) ) {
+            $privacy_fields = array(
+                'profile_public',
+                'show_contact_info',
+                'allow_direct_booking',
+            );
+
+            foreach ( $privacy_fields as $field ) {
+                $value = isset( $_POST[ $field ] ) ? 1 : 0;
+                update_user_meta( $current_user_id, 'schedspot_' . $field, $value );
+            }
+
+            echo '<div class="schedspot-notice schedspot-notice-success">' . __( 'Privacy settings updated successfully.', 'schedspot' ) . '</div>';
+        }
     }
 }

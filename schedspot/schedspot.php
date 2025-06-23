@@ -144,6 +144,7 @@ final class SchedSpot_Core {
 
         add_action( 'init', array( $this, 'init' ), 0 );
         add_action( 'plugins_loaded', array( $this, 'load_plugin_textdomain' ) );
+        add_action( 'template_redirect', array( $this, 'handle_virtual_pages' ) );
     }
 
     /**
@@ -347,6 +348,93 @@ final class SchedSpot_Core {
 
         // Default to WordPress capability check
         return current_user_can( $capability );
+    }
+
+    /**
+     * Handle virtual pages for SchedSpot actions.
+     *
+     * @since 1.0.0
+     */
+    public function handle_virtual_pages() {
+        if ( ! isset( $_GET['schedspot_action'] ) ) {
+            return;
+        }
+
+        $action = sanitize_text_field( $_GET['schedspot_action'] );
+
+        switch ( $action ) {
+            case 'booking_form':
+                $this->render_virtual_page( __( 'Book a Service', 'schedspot' ), '[schedspot_booking_form]' );
+                break;
+            case 'dashboard':
+                $this->render_virtual_page( __( 'My Dashboard', 'schedspot' ), '[schedspot_dashboard]' );
+                break;
+            case 'messages':
+                $this->render_virtual_page( __( 'Messages', 'schedspot' ), '[schedspot_messages]' );
+                break;
+            case 'profile':
+                $this->render_virtual_page( __( 'Profile & Settings', 'schedspot' ), '[schedspot_profile]' );
+                break;
+        }
+    }
+
+    /**
+     * Render a virtual page with shortcode content.
+     *
+     * @since 1.0.0
+     * @param string $title Page title.
+     * @param string $content Page content (shortcode).
+     */
+    private function render_virtual_page( $title, $content ) {
+        // Set up global post object for virtual page
+        global $wp_query, $post;
+
+        $wp_query->is_page = true;
+        $wp_query->is_singular = true;
+        $wp_query->is_home = false;
+        $wp_query->is_archive = false;
+        $wp_query->is_category = false;
+
+        // Create a fake post object
+        $post = new stdClass();
+        $post->ID = -1;
+        $post->post_author = 1;
+        $post->post_date = current_time( 'mysql' );
+        $post->post_date_gmt = current_time( 'mysql', 1 );
+        $post->post_content = $content;
+        $post->post_title = $title;
+        $post->post_excerpt = '';
+        $post->post_status = 'publish';
+        $post->comment_status = 'closed';
+        $post->ping_status = 'closed';
+        $post->post_password = '';
+        $post->post_name = sanitize_title( $title );
+        $post->to_ping = '';
+        $post->pinged = '';
+        $post->post_modified = current_time( 'mysql' );
+        $post->post_modified_gmt = current_time( 'mysql', 1 );
+        $post->post_content_filtered = '';
+        $post->post_parent = 0;
+        $post->guid = home_url( '?schedspot_action=' . $_GET['schedspot_action'] );
+        $post->menu_order = 0;
+        $post->post_type = 'page';
+        $post->post_mime_type = '';
+        $post->comment_count = 0;
+        $post->filter = 'raw';
+
+        // Set up query vars
+        $wp_query->queried_object = $post;
+        $wp_query->queried_object_id = $post->ID;
+        $wp_query->post = $post;
+        $wp_query->posts = array( $post );
+        $wp_query->post_count = 1;
+        $wp_query->found_posts = 1;
+        $wp_query->max_num_pages = 1;
+        $wp_query->is_404 = false;
+
+        // Load the page template
+        include( get_page_template() );
+        exit;
     }
 }
 

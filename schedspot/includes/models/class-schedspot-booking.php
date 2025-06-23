@@ -132,6 +132,13 @@ class SchedSpot_Booking {
     public $updated_at = '';
 
     /**
+     * Service name (cached).
+     *
+     * @var string
+     */
+    public $service_name = '';
+
+    /**
      * Constructor.
      *
      * @since 0.1.0
@@ -178,6 +185,11 @@ class SchedSpot_Booking {
             'lat'     => $booking->client_lat,
             'lng'     => $booking->client_lng,
         );
+
+        // Get service name if service_id is set
+        if ( $this->service_id ) {
+            $this->service_name = $this->get_service_name();
+        }
     }
 
     /**
@@ -525,5 +537,50 @@ class SchedSpot_Booking {
             'completed'  => __( 'Completed', 'schedspot' ),
             'cancelled'  => __( 'Cancelled', 'schedspot' ),
         ) );
+    }
+
+    /**
+     * Get service name for this booking.
+     *
+     * @since 1.0.0
+     * @return string Service name or empty string.
+     */
+    public function get_service_name() {
+        if ( ! $this->service_id ) {
+            return '';
+        }
+
+        global $wpdb;
+        $service_name = $wpdb->get_var( $wpdb->prepare(
+            "SELECT name FROM {$wpdb->prefix}schedspot_services WHERE id = %d",
+            $this->service_id
+        ) );
+
+        return $service_name ? $service_name : '';
+    }
+
+    /**
+     * Get worker name for this booking.
+     *
+     * @since 1.0.0
+     * @return string Worker name or empty string.
+     */
+    public function get_worker_name() {
+        if ( ! $this->worker_id ) {
+            return '';
+        }
+
+        $worker = get_userdata( $this->worker_id );
+        return $worker ? $worker->display_name : '';
+    }
+
+    /**
+     * Get client name for this booking.
+     *
+     * @since 1.0.0
+     * @return string Client name.
+     */
+    public function get_client_name() {
+        return isset( $this->client_details['name'] ) ? $this->client_details['name'] : '';
     }
 }
