@@ -582,6 +582,9 @@ class SchedSpot_API {
             return true;
         }
 
+        return false;
+    }
+
     public function check_booking_view_permissions( $request ) {
         // Allow viewing booking details for customers and workers
         if ( ! is_user_logged_in() ) {
@@ -604,9 +607,6 @@ class SchedSpot_API {
 
         // Users can view their own bookings (as customer or worker)
         return $booking->user_id === $current_user_id || $booking->worker_id === $current_user_id;
-    }
-
-        return false;
     }
 
     public function check_worker_permissions( $request ) {
@@ -730,7 +730,6 @@ class SchedSpot_API {
             'certifications'    => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
             'languages'         => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
             'availability_note' => array( 'required' => false, 'sanitize_callback' => 'sanitize_textarea_field' ),
-            'is_available'      => array( 'required' => false, 'sanitize_callback' => 'rest_sanitize_boolean' ),
         );
     }
 
