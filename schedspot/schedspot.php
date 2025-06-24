@@ -527,9 +527,47 @@ final class SchedSpot_Core {
         $wp_query->max_num_pages = 1;
         $wp_query->is_404 = false;
 
+        // Try to get page template, fallback to index.php if not found
+        $template = get_page_template();
+        if ( ! $template || ! file_exists( $template ) ) {
+            $template = get_template_directory() . '/index.php';
+            if ( ! file_exists( $template ) ) {
+                // Last resort: create a basic template
+                $this->render_basic_template( $title, $content );
+                exit;
+            }
+        }
+
         // Load the page template
-        include( get_page_template() );
+        include( $template );
         exit;
+    }
+
+    /**
+     * Render a basic template for virtual pages when no theme template is available.
+     *
+     * @since 1.0.0
+     * @param string $title Page title.
+     * @param string $content Page content (shortcode).
+     */
+    private function render_basic_template( $title, $content ) {
+        get_header();
+        ?>
+        <div id="primary" class="content-area">
+            <main id="main" class="site-main">
+                <article class="page">
+                    <header class="entry-header">
+                        <h1 class="entry-title"><?php echo esc_html( $title ); ?></h1>
+                    </header>
+                    <div class="entry-content">
+                        <?php echo do_shortcode( $content ); ?>
+                    </div>
+                </article>
+            </main>
+        </div>
+        <?php
+        get_sidebar();
+        get_footer();
     }
 }
 

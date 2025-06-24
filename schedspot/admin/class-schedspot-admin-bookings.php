@@ -57,7 +57,7 @@ class SchedSpot_Admin_Bookings {
      */
     public static function bookings_page() {
         $instance = new self();
-        
+
         // Handle bulk actions
         if ( isset( $_POST['action'] ) && $_POST['action'] !== '-1' ) {
             $instance->handle_bulk_action();
@@ -71,7 +71,7 @@ class SchedSpot_Admin_Bookings {
         // Get bookings with filters
         $bookings = $instance->get_filtered_bookings();
         $total_bookings = $instance->get_bookings_count();
-        
+
         // Load template
         include SCHEDSPOT_PLUGIN_DIR . 'templates/admin/bookings-list.php';
     }
@@ -84,31 +84,31 @@ class SchedSpot_Admin_Bookings {
      */
     private function get_filtered_bookings() {
         global $wpdb;
-        
+
         $per_page = 20;
         $current_page = isset( $_GET['paged'] ) ? max( 1, intval( $_GET['paged'] ) ) : 1;
         $offset = ( $current_page - 1 ) * $per_page;
-        
+
         $where_clauses = array( '1=1' );
         $where_values = array();
-        
+
         // Status filter
         if ( isset( $_GET['status'] ) && $_GET['status'] !== 'all' ) {
             $where_clauses[] = 'status = %s';
             $where_values[] = sanitize_text_field( $_GET['status'] );
         }
-        
+
         // Date range filter
         if ( isset( $_GET['date_from'] ) && $_GET['date_from'] ) {
             $where_clauses[] = 'booking_date >= %s';
             $where_values[] = sanitize_text_field( $_GET['date_from'] );
         }
-        
+
         if ( isset( $_GET['date_to'] ) && $_GET['date_to'] ) {
             $where_clauses[] = 'booking_date <= %s';
             $where_values[] = sanitize_text_field( $_GET['date_to'] );
         }
-        
+
         // Search filter
         if ( isset( $_GET['s'] ) && $_GET['s'] ) {
             $search = '%' . $wpdb->esc_like( sanitize_text_field( $_GET['s'] ) ) . '%';
@@ -117,17 +117,17 @@ class SchedSpot_Admin_Bookings {
             $where_values[] = $search;
             $where_values[] = $search;
         }
-        
+
         $where_clause = implode( ' AND ', $where_clauses );
-        
+
         $query = "SELECT * FROM {$wpdb->prefix}schedspot_bookings WHERE {$where_clause} ORDER BY created_at DESC LIMIT %d OFFSET %d";
         $where_values[] = $per_page;
         $where_values[] = $offset;
-        
+
         if ( ! empty( $where_values ) ) {
             $query = $wpdb->prepare( $query, $where_values );
         }
-        
+
         return $wpdb->get_results( $query );
     }
 
@@ -139,26 +139,26 @@ class SchedSpot_Admin_Bookings {
      */
     private function get_bookings_count() {
         global $wpdb;
-        
+
         $where_clauses = array( '1=1' );
         $where_values = array();
-        
+
         // Apply same filters as get_filtered_bookings
         if ( isset( $_GET['status'] ) && $_GET['status'] !== 'all' ) {
             $where_clauses[] = 'status = %s';
             $where_values[] = sanitize_text_field( $_GET['status'] );
         }
-        
+
         if ( isset( $_GET['date_from'] ) && $_GET['date_from'] ) {
             $where_clauses[] = 'booking_date >= %s';
             $where_values[] = sanitize_text_field( $_GET['date_from'] );
         }
-        
+
         if ( isset( $_GET['date_to'] ) && $_GET['date_to'] ) {
             $where_clauses[] = 'booking_date <= %s';
             $where_values[] = sanitize_text_field( $_GET['date_to'] );
         }
-        
+
         if ( isset( $_GET['s'] ) && $_GET['s'] ) {
             $search = '%' . $wpdb->esc_like( sanitize_text_field( $_GET['s'] ) ) . '%';
             $where_clauses[] = '(client_name LIKE %s OR client_email LIKE %s OR notes LIKE %s)';
@@ -166,14 +166,14 @@ class SchedSpot_Admin_Bookings {
             $where_values[] = $search;
             $where_values[] = $search;
         }
-        
+
         $where_clause = implode( ' AND ', $where_clauses );
         $query = "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings WHERE {$where_clause}";
-        
+
         if ( ! empty( $where_values ) ) {
             $query = $wpdb->prepare( $query, $where_values );
         }
-        
+
         return $wpdb->get_var( $query );
     }
 
@@ -186,14 +186,14 @@ class SchedSpot_Admin_Bookings {
         if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'bulk-bookings' ) ) {
             wp_die( __( 'Security check failed.', 'schedspot' ) );
         }
-        
+
         $action = sanitize_text_field( $_POST['action'] );
         $booking_ids = array_map( 'intval', $_POST['booking'] ?? array() );
-        
+
         if ( empty( $booking_ids ) ) {
             return;
         }
-        
+
         switch ( $action ) {
             case 'delete':
                 $this->bulk_delete_bookings( $booking_ids );
@@ -218,11 +218,12 @@ class SchedSpot_Admin_Bookings {
     private function handle_individual_action() {
         $action = sanitize_text_field( $_GET['action'] );
         $booking_id = intval( $_GET['booking_id'] );
-        
-        if ( ! wp_verify_nonce( $_GET['_wpnonce'], 'booking_action_' . $booking_id ) ) {
+
+        // Check if nonce exists before verifying
+        if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( $_GET['_wpnonce'], 'booking_action_' . $booking_id ) ) {
             wp_die( __( 'Security check failed.', 'schedspot' ) );
         }
-        
+
         switch ( $action ) {
             case 'view':
                 $this->view_booking_details( $booking_id );
@@ -244,12 +245,12 @@ class SchedSpot_Admin_Bookings {
      */
     private function bulk_delete_bookings( $booking_ids ) {
         global $wpdb;
-        
+
         $placeholders = implode( ',', array_fill( 0, count( $booking_ids ), '%d' ) );
         $query = "DELETE FROM {$wpdb->prefix}schedspot_bookings WHERE id IN ($placeholders)";
-        
+
         $deleted = $wpdb->query( $wpdb->prepare( $query, $booking_ids ) );
-        
+
         if ( $deleted ) {
             $message = sprintf( 
                 _n( '%d booking deleted.', '%d bookings deleted.', $deleted, 'schedspot' ), 
@@ -268,13 +269,13 @@ class SchedSpot_Admin_Bookings {
      */
     private function bulk_update_status( $booking_ids, $status ) {
         global $wpdb;
-        
+
         $placeholders = implode( ',', array_fill( 0, count( $booking_ids ), '%d' ) );
         $query = "UPDATE {$wpdb->prefix}schedspot_bookings SET status = %s WHERE id IN ($placeholders)";
-        
+
         $params = array_merge( array( $status ), $booking_ids );
         $updated = $wpdb->query( $wpdb->prepare( $query, $params ) );
-        
+
         if ( $updated ) {
             $message = sprintf( 
                 _n( '%d booking updated.', '%d bookings updated.', $updated, 'schedspot' ), 
@@ -329,13 +330,13 @@ class SchedSpot_Admin_Bookings {
      */
     private function delete_booking( $booking_id ) {
         global $wpdb;
-        
+
         $deleted = $wpdb->delete( 
             $wpdb->prefix . 'schedspot_bookings', 
             array( 'id' => $booking_id ), 
             array( '%d' ) 
         );
-        
+
         if ( $deleted ) {
             wp_redirect( admin_url( 'admin.php?page=schedspot-bookings&deleted=1' ) );
             exit;
@@ -354,16 +355,16 @@ class SchedSpot_Admin_Bookings {
         if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'update_booking_' . $booking_id ) ) {
             wp_die( __( 'Security check failed.', 'schedspot' ) );
         }
-        
+
         global $wpdb;
-        
+
         $update_data = array(
             'status' => sanitize_text_field( $_POST['status'] ),
             'booking_date' => sanitize_text_field( $_POST['booking_date'] ),
             'start_time' => sanitize_text_field( $_POST['start_time'] ),
             'notes' => sanitize_textarea_field( $_POST['notes'] ),
         );
-        
+
         $updated = $wpdb->update(
             $wpdb->prefix . 'schedspot_bookings',
             $update_data,
@@ -371,7 +372,7 @@ class SchedSpot_Admin_Bookings {
             array( '%s', '%s', '%s', '%s' ),
             array( '%d' )
         );
-        
+
         if ( $updated !== false ) {
             wp_redirect( admin_url( 'admin.php?page=schedspot-bookings&updated=1' ) );
             exit;
@@ -389,10 +390,10 @@ class SchedSpot_Admin_Bookings {
         if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_booking_status' ) ) {
             wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
         }
-        
+
         $booking_id = intval( $_POST['booking_id'] );
         $status = sanitize_text_field( $_POST['status'] );
-        
+
         global $wpdb;
         $updated = $wpdb->update(
             $wpdb->prefix . 'schedspot_bookings',
@@ -401,7 +402,7 @@ class SchedSpot_Admin_Bookings {
             array( '%s' ),
             array( '%d' )
         );
-        
+
         if ( $updated !== false ) {
             wp_send_json_success( array( 
                 'message' => __( 'Booking status updated successfully.', 'schedspot' ) 
@@ -422,16 +423,16 @@ class SchedSpot_Admin_Bookings {
         if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_delete_booking' ) ) {
             wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
         }
-        
+
         $booking_id = intval( $_POST['booking_id'] );
-        
+
         global $wpdb;
         $deleted = $wpdb->delete( 
             $wpdb->prefix . 'schedspot_bookings', 
             array( 'id' => $booking_id ), 
             array( '%d' ) 
         );
-        
+
         if ( $deleted ) {
             wp_send_json_success( array( 
                 'message' => __( 'Booking deleted successfully.', 'schedspot' ) 
@@ -452,15 +453,15 @@ class SchedSpot_Admin_Bookings {
         if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_refresh_bookings' ) ) {
             wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
         }
-        
+
         $bookings = $this->get_filtered_bookings();
-        
+
         ob_start();
         foreach ( $bookings as $booking ) {
             include SCHEDSPOT_PLUGIN_DIR . 'templates/admin/booking-row.php';
         }
         $html = ob_get_clean();
-        
+
         wp_send_json_success( array( 'html' => $html ) );
     }
 

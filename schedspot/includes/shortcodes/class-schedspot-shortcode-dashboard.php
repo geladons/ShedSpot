@@ -244,11 +244,14 @@ class SchedSpot_Shortcode_Dashboard {
 
         $user = get_user_by( 'ID', $user_id );
 
-        // Get bookings by email (for guest bookings)
+        // Get bookings by email (for guest bookings) with service and worker names
         $bookings = $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}schedspot_bookings 
-             WHERE client_email = %s 
-             ORDER BY booking_date DESC, start_time DESC 
+            "SELECT b.*, s.name as service_name, u.display_name as worker_name 
+             FROM {$wpdb->prefix}schedspot_bookings b
+             LEFT JOIN {$wpdb->prefix}schedspot_services s ON b.service_id = s.id
+             LEFT JOIN {$wpdb->users} u ON b.worker_id = u.ID
+             WHERE b.client_email = %s 
+             ORDER BY b.booking_date DESC, b.start_time DESC 
              LIMIT 10",
             $user->user_email
         ) );
@@ -422,11 +425,14 @@ class SchedSpot_Shortcode_Dashboard {
         global $wpdb;
 
         return $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}schedspot_bookings 
-             WHERE client_email = %s 
-             AND booking_date >= CURDATE() 
-             AND status IN ('pending', 'confirmed')
-             ORDER BY booking_date ASC, start_time ASC 
+            "SELECT b.*, s.name as service_name, u.display_name as worker_name 
+             FROM {$wpdb->prefix}schedspot_bookings b
+             LEFT JOIN {$wpdb->prefix}schedspot_services s ON b.service_id = s.id
+             LEFT JOIN {$wpdb->users} u ON b.worker_id = u.ID
+             WHERE b.client_email = %s 
+             AND b.booking_date >= CURDATE() 
+             AND b.status IN ('pending', 'confirmed')
+             ORDER BY b.booking_date ASC, b.start_time ASC 
              LIMIT 5",
             $email
         ) );
