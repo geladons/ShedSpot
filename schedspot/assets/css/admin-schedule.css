@@ -69,6 +69,48 @@
     display: block;
 }
 
+/* WordPress Admin Tab Styles */
+.schedspot-schedule-tabs .nav-tab-wrapper {
+    border-bottom: 1px solid #ccd0d4;
+    margin: 0;
+    padding: 0;
+}
+
+.schedspot-schedule-tabs .nav-tab {
+    background: #f1f1f1;
+    border: 1px solid #ccd0d4;
+    border-bottom: none;
+    color: #555;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    margin: 0 5px -1px 0;
+    padding: 10px 15px;
+    position: relative;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.schedspot-schedule-tabs .nav-tab:hover {
+    background: #fafafa;
+    color: #333;
+}
+
+.schedspot-schedule-tabs .nav-tab.nav-tab-active {
+    background: #fff;
+    border-bottom: 1px solid #fff;
+    color: #333;
+    margin-bottom: -1px;
+    padding-bottom: 11px;
+}
+
+.schedspot-schedule-tabs .nav-tab:focus {
+    box-shadow: 0 0 0 1px #5b9dd9, 0 0 2px 1px rgba(30, 140, 190, 0.8);
+    outline: none;
+}
+
 /* Weekly Schedule Styles */
 .schedspot-weekly-schedule {
     max-width: 800px;

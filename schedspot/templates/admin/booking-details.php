@@ -179,6 +179,15 @@ if ( ! is_array( $client_details ) ) {
                             </a>
                         </td>
                     </tr>
+                    <tr>
+                        <th><?php _e( 'Client-Worker Messages', 'schedspot' ); ?></th>
+                        <td>
+                            <a href="<?php echo esc_url( admin_url( 'admin.php?page=schedspot-messages&booking_id=' . $booking->id ) ); ?>" class="button button-secondary">
+                                <?php _e( 'View Message Thread', 'schedspot' ); ?>
+                            </a>
+                            <p class="description"><?php _e( 'View conversation between client and worker for this booking.', 'schedspot' ); ?></p>
+                        </td>
+                    </tr>
                     <?php else : ?>
                     <tr>
                         <th><?php _e( 'Worker', 'schedspot' ); ?></th>

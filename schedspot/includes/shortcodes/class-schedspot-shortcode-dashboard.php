@@ -69,22 +69,24 @@ class SchedSpot_Shortcode_Dashboard {
 
         // Get dashboard data based on effective user role
         $dashboard_data = $this->get_dashboard_data( $current_user, $user_role );
-        
+
         // Handle AJAX requests
         $this->handle_dashboard_actions();
 
         // Start output buffering
         ob_start();
-        
+
         // Load appropriate template based on user role
         if ( $user_role === 'schedspot_worker' ) {
             include SCHEDSPOT_PLUGIN_DIR . 'templates/shortcodes/dashboard-worker.php';
         } elseif ( $user_role === 'schedspot_customer' ) {
             include SCHEDSPOT_PLUGIN_DIR . 'templates/shortcodes/dashboard-customer.php';
+        } elseif ( $user_role === 'administrator' ) {
+            include SCHEDSPOT_PLUGIN_DIR . 'templates/shortcodes/dashboard-admin.php';
         } else {
             include SCHEDSPOT_PLUGIN_DIR . 'templates/shortcodes/dashboard-general.php';
         }
-        
+
         return ob_get_clean();
     }
 
@@ -105,7 +107,7 @@ class SchedSpot_Shortcode_Dashboard {
             $admin_role_mode = get_user_meta( $user->ID, 'schedspot_admin_role_mode', true );
             return $admin_role_mode ?: 'administrator';
         }
-        
+
         return 'subscriber';
     }
 
@@ -131,6 +133,9 @@ class SchedSpot_Shortcode_Dashboard {
                 break;
             case 'schedspot_customer':
                 $data = array_merge( $data, $this->get_customer_dashboard_data( $user->ID ) );
+                break;
+            case 'administrator':
+                $data = array_merge( $data, $this->get_admin_dashboard_data( $user->ID ) );
                 break;
             default:
                 $data = array_merge( $data, $this->get_general_dashboard_data( $user->ID ) );
@@ -211,13 +216,19 @@ class SchedSpot_Shortcode_Dashboard {
             ) ) ?: 0,
         );
 
+        // Prepare worker profile with availability status
+        $worker_profile = $profile ?: array();
+        $worker_profile['is_available'] = $is_available;
+
         return array(
             'profile' => $profile ?: array(),
+            'worker_profile' => $worker_profile,
             'is_available' => $is_available,
             'bookings' => $bookings,
             'stats' => $stats,
             'upcoming_bookings' => $this->get_upcoming_bookings( $user_id ),
             'recent_messages' => $this->get_recent_messages( $user_id ),
+            'user' => get_user_by( 'ID', $user_id ), // Add user object for template
         );
     }
 
@@ -236,8 +247,8 @@ class SchedSpot_Shortcode_Dashboard {
         // Get bookings by email (for guest bookings)
         $bookings = $wpdb->get_results( $wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}schedspot_bookings 
-             WHERE JSON_UNQUOTE(JSON_EXTRACT(client_details, '$.email')) = %s 
-             ORDER BY booking_date DESC, booking_time DESC 
+             WHERE client_email = %s 
+             ORDER BY booking_date DESC, start_time DESC 
              LIMIT 10",
             $user->user_email
         ) );
@@ -249,15 +260,81 @@ class SchedSpot_Shortcode_Dashboard {
             'confirmed_bookings' => count( array_filter( $bookings, function( $b ) { return $b->status === 'confirmed'; } ) ),
             'completed_bookings' => count( array_filter( $bookings, function( $b ) { return $b->status === 'completed'; } ) ),
             'total_spent' => array_sum( array_map( function( $b ) { 
-                return in_array( $b->status, array( 'confirmed', 'completed' ) ) ? $b->total_price : 0; 
+                return in_array( $b->status, array( 'confirmed', 'completed' ) ) ? $b->total_cost : 0; 
             }, $bookings ) ),
+            'unread_messages' => 0, // TODO: Implement messaging system integration
+        );
+
+        // Get user profile data
+        $profile = array(
+            'phone' => get_user_meta( $user_id, 'schedspot_customer_phone', true ),
+            'bio' => get_user_meta( $user_id, 'schedspot_customer_bio', true ),
+            'address' => get_user_meta( $user_id, 'schedspot_customer_address', true ),
         );
 
         return array(
             'bookings' => $bookings,
+            'recent_bookings' => $bookings, // Alias for template compatibility
             'stats' => $stats,
             'upcoming_bookings' => $this->get_upcoming_customer_bookings( $user->user_email ),
             'recent_messages' => $this->get_recent_messages( $user_id ),
+            'profile' => $profile,
+        );
+    }
+
+    /**
+     * Get admin dashboard data.
+     *
+     * @since 1.7.3
+     * @param int $user_id User ID.
+     * @return array Admin dashboard data.
+     */
+    private function get_admin_dashboard_data( $user_id ) {
+        global $wpdb;
+
+        // Get all bookings for admin overview
+        $all_bookings = $wpdb->get_results(
+            "SELECT b.*, s.name as service_name, u.display_name as worker_name 
+             FROM {$wpdb->prefix}schedspot_bookings b
+             LEFT JOIN {$wpdb->prefix}schedspot_services s ON b.service_id = s.id
+             LEFT JOIN {$wpdb->users} u ON b.worker_id = u.ID
+             ORDER BY b.booking_date DESC, b.start_time DESC
+             LIMIT 20"
+        );
+
+        // Get comprehensive statistics
+        $stats = array(
+            'total_bookings' => $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings"
+            ),
+            'pending_bookings' => $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings WHERE status = 'pending'"
+            ),
+            'confirmed_bookings' => $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings WHERE status = 'confirmed'"
+            ),
+            'completed_bookings' => $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings WHERE status = 'completed'"
+            ),
+            'total_workers' => $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$wpdb->users} u 
+                 INNER JOIN {$wpdb->usermeta} um ON u.ID = um.user_id 
+                 WHERE um.meta_key = '{$wpdb->prefix}capabilities' 
+                 AND um.meta_value LIKE '%schedspot_worker%'"
+            ),
+            'total_revenue' => $wpdb->get_var(
+                "SELECT SUM(total_cost) FROM {$wpdb->prefix}schedspot_bookings 
+                 WHERE status IN ('confirmed', 'completed')"
+            ) ?: 0,
+            'unread_messages' => 0, // TODO: Implement messaging system integration
+        );
+
+        return array(
+            'bookings' => $all_bookings,
+            'recent_bookings' => $all_bookings, // Alias for template compatibility
+            'stats' => $stats,
+            'upcoming_bookings' => array(), // Not relevant for admin view
+            'recent_messages' => array(), // TODO: Implement messaging system integration
         );
     }
 
@@ -346,10 +423,10 @@ class SchedSpot_Shortcode_Dashboard {
 
         return $wpdb->get_results( $wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}schedspot_bookings 
-             WHERE JSON_UNQUOTE(JSON_EXTRACT(client_details, '$.email')) = %s 
+             WHERE client_email = %s 
              AND booking_date >= CURDATE() 
              AND status IN ('pending', 'confirmed')
-             ORDER BY booking_date ASC, booking_time ASC 
+             ORDER BY booking_date ASC, start_time ASC 
              LIMIT 5",
             $email
         ) );
@@ -377,7 +454,7 @@ class SchedSpot_Shortcode_Dashboard {
         // Handle form submissions and AJAX requests
         if ( isset( $_POST['action'] ) ) {
             $action = sanitize_text_field( $_POST['action'] );
-            
+
             switch ( $action ) {
                 case 'update_availability':
                     $this->handle_availability_update();
@@ -401,9 +478,9 @@ class SchedSpot_Shortcode_Dashboard {
 
         $user_id = get_current_user_id();
         $is_available = isset( $_POST['is_available'] ) ? '1' : '0';
-        
+
         update_user_meta( $user_id, 'schedspot_is_available', $is_available );
-        
+
         wp_redirect( add_query_arg( 'updated', 'availability' ) );
         exit;
     }
@@ -425,9 +502,9 @@ class SchedSpot_Shortcode_Dashboard {
             'address' => sanitize_text_field( $_POST['address'] ?? '' ),
             'updated_at' => current_time( 'mysql' ),
         );
-        
+
         update_user_meta( $user_id, 'schedspot_worker_profile', $profile_data );
-        
+
         wp_redirect( add_query_arg( 'updated', 'profile' ) );
         exit;
     }
