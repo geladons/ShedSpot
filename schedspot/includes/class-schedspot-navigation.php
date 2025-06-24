@@ -88,26 +88,55 @@ class SchedSpot_Navigation {
     private function should_load_navigation() {
         global $post;
 
+        // Don't load on admin pages
+        if ( is_admin() ) {
+            return false;
+        }
+
+        // Don't load on login/register pages
+        if ( is_page() && $post ) {
+            $page_template = get_page_template_slug( $post->ID );
+            if ( in_array( $page_template, array( 'page-login.php', 'page-register.php' ) ) ) {
+                return false;
+            }
+        }
+
         // Load on SchedSpot virtual pages
         if ( isset( $_GET['schedspot_action'] ) ) {
             return true;
         }
 
-        // Load on pages with SchedSpot shortcodes
-        if ( $post && has_shortcode( $post->post_content, 'schedspot_booking_form' ) ) {
-            return true;
+        // Load on pages with any SchedSpot shortcodes
+        if ( $post && $post->post_content ) {
+            $schedspot_shortcodes = array(
+                'schedspot_booking_form',
+                'schedspot_dashboard',
+                'schedspot_messages',
+                'schedspot_profile',
+                'schedspot_services',
+                'schedspot_workers_grid',
+                'schedspot_navigation'
+            );
+
+            foreach ( $schedspot_shortcodes as $shortcode ) {
+                if ( has_shortcode( $post->post_content, $shortcode ) ) {
+                    return true;
+                }
+            }
         }
-        if ( $post && has_shortcode( $post->post_content, 'schedspot_dashboard' ) ) {
-            return true;
-        }
-        if ( $post && has_shortcode( $post->post_content, 'schedspot_messages' ) ) {
-            return true;
-        }
-        if ( $post && has_shortcode( $post->post_content, 'schedspot_profile' ) ) {
+
+        // Load on frontend for logged-in users (so they always have access to navigation)
+        if ( is_user_logged_in() && ! is_admin() ) {
             return true;
         }
 
-        return false;
+        // Load on home page and main pages for easy access
+        if ( is_front_page() || is_home() ) {
+            return true;
+        }
+
+        // Allow filtering for custom conditions
+        return apply_filters( 'schedspot_should_load_navigation', false );
     }
 
     /**
@@ -210,7 +239,7 @@ class SchedSpot_Navigation {
             foreach ( $section_items as $item ) {
                 $class = isset( $item['class'] ) ? ' class="' . esc_attr( $item['class'] ) . '"' : '';
                 $target = isset( $item['target'] ) ? ' target="' . esc_attr( $item['target'] ) . '"' : '';
-                
+
                 echo '<li>';
                 echo '<a href="' . esc_url( $item['url'] ) . '"' . $class . $target . '>';
                 echo '<span class="nav-icon">' . $item['icon'] . '</span>';

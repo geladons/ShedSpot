@@ -96,23 +96,6 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <div class="stat-label"><?php _e( 'Total Spent', 'schedspot' ); ?></div>
                 </div>
             </div>
-                        <span class="dashicons dashicons-yes-alt"></span>
-                    </div>
-                    <div class="stat-content">
-                        <h3><?php echo esc_html( $dashboard_data['stats']['confirmed_bookings'] ); ?></h3>
-                        <p><?php _e( 'Confirmed', 'schedspot' ); ?></p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <span class="dashicons dashicons-money-alt"></span>
-                    </div>
-                    <div class="stat-content">
-                        <h3>$<?php echo esc_html( number_format( $dashboard_data['stats']['total_spent'], 2 ) ); ?></h3>
-                        <p><?php _e( 'Total Spent', 'schedspot' ); ?></p>
-                    </div>
-                </div>
-            </div>
 
             <div class="bookings-section">
                 <div class="section-header">
@@ -269,10 +252,10 @@ jQuery(document).ready(function($) {
     $('.dashboard-nav .nav-item').on('click', function(e) {
         e.preventDefault();
         var tab = $(this).data('tab');
-        
+
         $('.dashboard-nav .nav-item').removeClass('active');
         $(this).addClass('active');
-        
+
         $('.dashboard-tab').removeClass('active');
         $('#' + tab).addClass('active');
     });

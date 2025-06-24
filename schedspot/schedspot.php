@@ -3,7 +3,7 @@
  * Plugin Name: SchedSpot
  * Plugin URI: https://schedspot.com
  * Description: A comprehensive WordPress service booking and marketplace plugin combining appointment scheduling with a multi-vendor marketplace.
- * Version: 1.7.0
+ * Version: 1.7.6
  * Author: SchedSpot Team
  * Author URI: https://schedspot.com
  * License: GPL v2 or later
@@ -16,7 +16,7 @@
  * Network: false
  *
  * @package SchedSpot
- * @version 1.7.0
+ * @version 1.7.6
  */
 
 // Prevent direct access
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'SCHEDSPOT_VERSION', '1.7.0' );
+define( 'SCHEDSPOT_VERSION', '1.7.6' );
 define( 'SCHEDSPOT_PLUGIN_FILE', __FILE__ );
 define( 'SCHEDSPOT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SCHEDSPOT_PLUGIN_URL', plugins_url( '/', __FILE__ ) );
@@ -470,6 +470,9 @@ final class SchedSpot_Core {
             case 'profile':
                 $this->render_virtual_page( __( 'Profile & Settings', 'schedspot' ), '[schedspot_profile]' );
                 break;
+            case 'workers':
+                $this->render_virtual_page( __( 'Find Workers', 'schedspot' ), '[schedspot_workers_grid]' );
+                break;
         }
     }
 
@@ -527,6 +530,12 @@ final class SchedSpot_Core {
         $wp_query->max_num_pages = 1;
         $wp_query->is_404 = false;
 
+        // Add filter to ensure shortcodes are processed in virtual page content
+        add_filter( 'the_content', 'do_shortcode', 11 );
+
+        // Add filter to process shortcodes in virtual page content specifically
+        add_filter( 'the_content', array( $this, 'process_virtual_page_shortcodes' ), 12 );
+
         // Try to get page template, fallback to index.php if not found
         $template = get_page_template();
         if ( ! $template || ! file_exists( $template ) ) {
@@ -541,6 +550,28 @@ final class SchedSpot_Core {
         // Load the page template
         include( $template );
         exit;
+    }
+
+    /**
+     * Process shortcodes in virtual page content.
+     *
+     * @since 1.0.0
+     * @param string $content Page content.
+     * @return string Processed content.
+     */
+    public function process_virtual_page_shortcodes( $content ) {
+        global $post;
+
+        // Only process if this is our virtual page
+        if ( isset( $post->ID ) && $post->ID === -1 && isset( $_GET['schedspot_action'] ) ) {
+            // Ensure shortcodes are processed
+            $content = do_shortcode( $content );
+
+            // Apply additional content filters that might be needed
+            $content = wpautop( $content );
+        }
+
+        return $content;
     }
 
     /**

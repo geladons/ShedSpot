@@ -50,30 +50,30 @@ class SchedSpot_Admin_Workers {
      */
     public static function workers_page() {
         $instance = new self();
-        
+
         // Handle form submissions
         if ( isset( $_POST['action'] ) ) {
             $instance->handle_form_submission();
         }
-        
+
         // Handle individual actions
         if ( isset( $_GET['action'] ) ) {
             $instance->handle_individual_action();
         }
-        
+
         // Get workers list
         $workers = $instance->get_workers();
         $available_users = $instance->get_available_users();
         $services = $instance->get_services();
-        
+
         // Determine current view
         $current_view = isset( $_GET['action'] ) && in_array( $_GET['action'], array( 'edit', 'add' ) ) ? $_GET['action'] : 'list';
         $editing_worker = null;
-        
+
         if ( $current_view === 'edit' && isset( $_GET['worker_id'] ) ) {
             $editing_worker = $instance->get_worker( intval( $_GET['worker_id'] ) );
         }
-        
+
         // Load template
         include SCHEDSPOT_PLUGIN_DIR . 'templates/admin/workers-management.php';
     }
@@ -137,14 +137,14 @@ class SchedSpot_Admin_Workers {
      */
     private function get_worker( $worker_id ) {
         $user = get_user_by( 'ID', $worker_id );
-        
+
         if ( ! $user || ! in_array( 'schedspot_worker', $user->roles ) ) {
             return null;
         }
-        
+
         $profile = get_user_meta( $user->ID, 'schedspot_worker_profile', true );
         $availability = get_user_meta( $user->ID, 'schedspot_worker_availability', true );
-        
+
         return (object) array(
             'ID' => $user->ID,
             'user_login' => $user->user_login,
@@ -169,7 +169,7 @@ class SchedSpot_Admin_Workers {
             'role__not_in' => array( 'schedspot_worker' ),
             'fields' => array( 'ID', 'display_name', 'user_email' ),
         );
-        
+
         return get_users( $args );
     }
 
@@ -196,7 +196,7 @@ class SchedSpot_Admin_Workers {
      */
     private function get_worker_booking_count( $worker_id ) {
         global $wpdb;
-        
+
         return $wpdb->get_var( $wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings WHERE worker_id = %d",
             $worker_id
@@ -223,7 +223,7 @@ class SchedSpot_Admin_Workers {
      */
     private function handle_form_submission() {
         $action = sanitize_text_field( $_POST['action'] );
-        
+
         switch ( $action ) {
             case 'add_worker':
                 $this->add_worker();
@@ -247,7 +247,7 @@ class SchedSpot_Admin_Workers {
      */
     private function handle_individual_action() {
         $action = sanitize_text_field( $_GET['action'] );
-        
+
         switch ( $action ) {
             case 'delete':
                 if ( isset( $_GET['worker_id'] ) && wp_verify_nonce( $_GET['_wpnonce'], 'delete_worker_' . $_GET['worker_id'] ) ) {
@@ -271,18 +271,18 @@ class SchedSpot_Admin_Workers {
         if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'add_worker' ) ) {
             wp_die( __( 'Security check failed.', 'schedspot' ) );
         }
-        
+
         $user_id = intval( $_POST['user_id'] );
         $user = get_user_by( 'ID', $user_id );
-        
+
         if ( ! $user ) {
             add_settings_error( 'schedspot_workers', 'user_not_found', __( 'User not found.', 'schedspot' ), 'error' );
             return;
         }
-        
+
         // Add worker role
         $user->add_role( 'schedspot_worker' );
-        
+
         // Save worker profile
         $profile_data = array(
             'bio' => sanitize_textarea_field( $_POST['worker_bio'] ),
@@ -293,16 +293,19 @@ class SchedSpot_Admin_Workers {
             'address' => sanitize_text_field( $_POST['worker_address'] ),
             'created_at' => current_time( 'mysql' ),
         );
-        
+
         update_user_meta( $user_id, 'schedspot_worker_profile', $profile_data );
         update_user_meta( $user_id, 'schedspot_is_available', '1' );
-        
+
         // Save service assignments
-        if ( isset( $_POST['assigned_services'] ) ) {
+        if ( isset( $_POST['assigned_services'] ) && is_array( $_POST['assigned_services'] ) ) {
             $assigned_services = array_map( 'intval', $_POST['assigned_services'] );
             update_user_meta( $user_id, 'schedspot_assigned_services', $assigned_services );
+        } else {
+            // If no services are selected, save an empty array
+            update_user_meta( $user_id, 'schedspot_assigned_services', array() );
         }
-        
+
         wp_redirect( admin_url( 'admin.php?page=schedspot-workers&added=1' ) );
         exit;
     }
@@ -314,11 +317,11 @@ class SchedSpot_Admin_Workers {
      */
     private function update_worker() {
         $worker_id = intval( $_POST['worker_id'] );
-        
+
         if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'update_worker_' . $worker_id ) ) {
             wp_die( __( 'Security check failed.', 'schedspot' ) );
         }
-        
+
         $profile_data = array(
             'bio' => sanitize_textarea_field( $_POST['worker_bio'] ),
             'skills' => array_map( 'sanitize_text_field', explode( ',', $_POST['worker_skills'] ) ),
@@ -328,15 +331,18 @@ class SchedSpot_Admin_Workers {
             'address' => sanitize_text_field( $_POST['worker_address'] ),
             'updated_at' => current_time( 'mysql' ),
         );
-        
+
         update_user_meta( $worker_id, 'schedspot_worker_profile', $profile_data );
-        
+
         // Update service assignments
-        if ( isset( $_POST['assigned_services'] ) ) {
+        if ( isset( $_POST['assigned_services'] ) && is_array( $_POST['assigned_services'] ) ) {
             $assigned_services = array_map( 'intval', $_POST['assigned_services'] );
             update_user_meta( $worker_id, 'schedspot_assigned_services', $assigned_services );
+        } else {
+            // If no services are selected, save an empty array
+            update_user_meta( $worker_id, 'schedspot_assigned_services', array() );
         }
-        
+
         wp_redirect( admin_url( 'admin.php?page=schedspot-workers&updated=1' ) );
         exit;
     }
@@ -348,13 +354,13 @@ class SchedSpot_Admin_Workers {
      */
     private function update_worker_availability() {
         $worker_id = intval( $_POST['worker_id'] );
-        
+
         if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'update_availability_' . $worker_id ) ) {
             wp_die( __( 'Security check failed.', 'schedspot' ) );
         }
-        
+
         $availability_data = array();
-        
+
         if ( isset( $_POST['availability'] ) ) {
             foreach ( $_POST['availability'] as $day => $slots ) {
                 $availability_data[ $day ] = array_map( function( $slot ) {
@@ -366,9 +372,9 @@ class SchedSpot_Admin_Workers {
                 }, $slots );
             }
         }
-        
+
         update_user_meta( $worker_id, 'schedspot_worker_availability', $availability_data );
-        
+
         wp_redirect( admin_url( 'admin.php?page=schedspot-workers&action=edit&worker_id=' . $worker_id . '&availability_updated=1' ) );
         exit;
     }
@@ -381,29 +387,29 @@ class SchedSpot_Admin_Workers {
      */
     private function delete_worker( $worker_id ) {
         global $wpdb;
-        
+
         // Check if worker has active bookings
         $active_bookings = $wpdb->get_var( $wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings WHERE worker_id = %d AND status IN ('pending', 'confirmed')",
             $worker_id
         ) );
-        
+
         if ( $active_bookings > 0 ) {
             wp_redirect( admin_url( 'admin.php?page=schedspot-workers&error=worker_has_bookings' ) );
             exit;
         }
-        
+
         $user = get_user_by( 'ID', $worker_id );
         if ( $user ) {
             // Remove worker role
             $user->remove_role( 'schedspot_worker' );
-            
+
             // Clean up worker meta
             delete_user_meta( $worker_id, 'schedspot_worker_profile' );
             delete_user_meta( $worker_id, 'schedspot_worker_availability' );
             delete_user_meta( $worker_id, 'schedspot_is_available' );
             delete_user_meta( $worker_id, 'schedspot_assigned_services' );
-            
+
             wp_redirect( admin_url( 'admin.php?page=schedspot-workers&deleted=1' ) );
             exit;
         } else {
@@ -421,9 +427,9 @@ class SchedSpot_Admin_Workers {
     private function toggle_worker_status( $worker_id ) {
         $current_status = get_user_meta( $worker_id, 'schedspot_is_available', true );
         $new_status = ( $current_status === '1' ) ? '0' : '1';
-        
+
         update_user_meta( $worker_id, 'schedspot_is_available', $new_status );
-        
+
         wp_redirect( admin_url( 'admin.php?page=schedspot-workers&status_updated=1' ) );
         exit;
     }
@@ -437,14 +443,14 @@ class SchedSpot_Admin_Workers {
         if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'bulk-workers' ) ) {
             wp_die( __( 'Security check failed.', 'schedspot' ) );
         }
-        
+
         $action = sanitize_text_field( $_POST['bulk_action'] );
         $worker_ids = array_map( 'intval', $_POST['worker'] ?? array() );
-        
+
         if ( empty( $worker_ids ) ) {
             return;
         }
-        
+
         switch ( $action ) {
             case 'activate':
                 $this->bulk_update_status( $worker_ids, '1' );
@@ -464,12 +470,12 @@ class SchedSpot_Admin_Workers {
      */
     private function bulk_update_status( $worker_ids, $status ) {
         $updated = 0;
-        
+
         foreach ( $worker_ids as $worker_id ) {
             update_user_meta( $worker_id, 'schedspot_is_available', $status );
             $updated++;
         }
-        
+
         if ( $updated ) {
             $message = sprintf( 
                 _n( '%d worker updated.', '%d workers updated.', $updated, 'schedspot' ), 
@@ -488,7 +494,7 @@ class SchedSpot_Admin_Workers {
         if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_save_worker' ) ) {
             wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
         }
-        
+
         // Implementation for AJAX worker saving
         wp_send_json_success( array( 'message' => __( 'Worker saved successfully.', 'schedspot' ) ) );
     }
@@ -502,10 +508,10 @@ class SchedSpot_Admin_Workers {
         if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_delete_worker' ) ) {
             wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
         }
-        
+
         $worker_id = intval( $_POST['worker_id'] );
         $this->delete_worker( $worker_id );
-        
+
         wp_send_json_success( array( 'message' => __( 'Worker deleted successfully.', 'schedspot' ) ) );
     }
 
@@ -518,10 +524,10 @@ class SchedSpot_Admin_Workers {
         if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_toggle_worker_status' ) ) {
             wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
         }
-        
+
         $worker_id = intval( $_POST['worker_id'] );
         $this->toggle_worker_status( $worker_id );
-        
+
         wp_send_json_success( array( 'message' => __( 'Worker status updated successfully.', 'schedspot' ) ) );
     }
 
@@ -534,12 +540,12 @@ class SchedSpot_Admin_Workers {
         if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_update_availability' ) ) {
             wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
         }
-        
+
         $worker_id = intval( $_POST['worker_id'] );
         $availability = json_decode( stripslashes( $_POST['availability'] ), true );
-        
+
         update_user_meta( $worker_id, 'schedspot_worker_availability', $availability );
-        
+
         wp_send_json_success( array( 'message' => __( 'Availability updated successfully.', 'schedspot' ) ) );
     }
 }

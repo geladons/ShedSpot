@@ -172,7 +172,7 @@ class SchedSpot_Shortcode_Booking_Form {
                 $data['schedspot_booking_date'], 
                 $data['schedspot_booking_time'] 
             );
-            
+
             if ( ! $is_available ) {
                 $errors[] = __( 'Selected worker is not available at the requested time.', 'schedspot' );
             }
@@ -272,7 +272,7 @@ class SchedSpot_Shortcode_Booking_Form {
      */
     private function send_booking_notifications( $booking_id ) {
         $booking = SchedSpot_Booking::get_booking( $booking_id );
-        
+
         if ( ! $booking ) {
             return;
         }
@@ -300,7 +300,7 @@ class SchedSpot_Shortcode_Booking_Form {
         $service_details = json_decode( $booking->service_details, true );
 
         $subject = sprintf( __( 'Booking Confirmation - %s', 'schedspot' ), $service_details['name'] );
-        
+
         $message = sprintf(
             __( 'Dear %s,
 
@@ -337,7 +337,7 @@ Thank you!', 'schedspot' ),
         $service_details = json_decode( $booking->service_details, true );
 
         $subject = __( 'New Booking Received', 'schedspot' );
-        
+
         $message = sprintf(
             __( 'A new booking has been received:
 
@@ -367,7 +367,7 @@ Please review and confirm the booking in the admin area.', 'schedspot' ),
      */
     private function send_worker_notification_email( $booking ) {
         $worker = get_user_by( 'ID', $booking->worker_id );
-        
+
         if ( ! $worker ) {
             return;
         }
@@ -376,7 +376,7 @@ Please review and confirm the booking in the admin area.', 'schedspot' ),
         $service_details = json_decode( $booking->service_details, true );
 
         $subject = __( 'New Booking Assignment', 'schedspot' );
-        
+
         $message = sprintf(
             __( 'Hello %s,
 
@@ -452,7 +452,13 @@ Please check your dashboard for more details.', 'schedspot' ),
             $assigned_services = get_user_meta( $user->ID, 'schedspot_assigned_services', true );
 
             // Filter by service if specified
-            if ( $service_id && $assigned_services ) {
+            if ( $service_id ) {
+                // If worker has no assigned services, skip them
+                if ( empty( $assigned_services ) || ! is_array( $assigned_services ) ) {
+                    continue;
+                }
+
+                // Check if the service is in the worker's assigned services
                 if ( ! in_array( intval( $service_id ), $assigned_services ) ) {
                     continue;
                 }
@@ -497,7 +503,7 @@ Please check your dashboard for more details.', 'schedspot' ),
      */
     private function get_worker( $worker_id ) {
         $user = get_user_by( 'ID', $worker_id );
-        
+
         if ( ! $user || ! in_array( 'schedspot_worker', $user->roles ) ) {
             return null;
         }

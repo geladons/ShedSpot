@@ -17,15 +17,15 @@ if ( ! defined( 'ABSPATH' ) ) {
     <div class="schedspot-conversations">
         <div class="schedspot-conversations-header">
             <h3><?php _e( 'Conversations', 'schedspot' ); ?></h3>
-            <button type="button" class="new-conversation-btn" onclick="startNewConversation()">
+            <button type="button" class="schedspot-btn schedspot-btn-primary schedspot-btn-small" onclick="startNewConversation()">
                 <?php _e( 'New', 'schedspot' ); ?>
             </button>
         </div>
-        
+
         <div class="conversations-search">
             <input type="text" id="conversation-search" placeholder="<?php esc_attr_e( 'Search conversations...', 'schedspot' ); ?>">
         </div>
-        
+
         <div class="schedspot-conversations-list">
             <?php if ( ! empty( $conversations ) ) : ?>
                 <?php foreach ( $conversations as $conversation ) : ?>
@@ -65,10 +65,10 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <h3><?php echo esc_html( $target_conversation['user']['name'] ); ?></h3>
                 </div>
                 <div class="chat-actions">
-                    <button type="button" class="chat-action-btn" onclick="toggleChatInfo()" title="<?php esc_attr_e( 'Chat Info', 'schedspot' ); ?>">
+                    <button type="button" class="schedspot-btn schedspot-btn-secondary schedspot-btn-small" onclick="toggleChatInfo()" title="<?php esc_attr_e( 'Chat Info', 'schedspot' ); ?>">
                         ℹ️
                     </button>
-                    <button type="button" class="chat-action-btn" onclick="clearConversation()" title="<?php esc_attr_e( 'Clear Conversation', 'schedspot' ); ?>">
+                    <button type="button" class="schedspot-btn schedspot-btn-warning schedspot-btn-small" onclick="clearConversation()" title="<?php esc_attr_e( 'Clear Conversation', 'schedspot' ); ?>">
                         🗑️
                     </button>
                 </div>
@@ -84,7 +84,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         </div>
                         <div class="content">
                             <div class="text"><?php echo wp_kses_post( nl2br( $message['content'] ) ); ?></div>
-                            
+
                             <?php if ( $message['attachment_url'] ) : ?>
                                 <div class="schedspot-attachment">
                                     <a href="<?php echo esc_url( $message['attachment_url'] ); ?>" target="_blank">
@@ -92,7 +92,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                                     </a>
                                 </div>
                             <?php endif; ?>
-                            
+
                             <div class="time"><?php echo esc_html( $message['time_ago'] ); ?></div>
                         </div>
                     </div>
@@ -109,7 +109,7 @@ if ( ! defined( 'ABSPATH' ) ) {
             <div class="schedspot-message-form">
                 <form id="schedspot-message-form" enctype="multipart/form-data">
                     <input type="hidden" name="recipient_id" value="<?php echo esc_attr( $target_conversation['user']['id'] ); ?>">
-                    
+
                     <div class="schedspot-message-input">
                         <div class="schedspot-file-upload">
                             <input type="file" id="message-attachment" name="attachment" accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx">
@@ -117,13 +117,13 @@ if ( ! defined( 'ABSPATH' ) ) {
                                 📎
                             </label>
                         </div>
-                        
+
                         <textarea id="message-text" 
                                   name="content" 
                                   placeholder="<?php esc_attr_e( 'Type your message...', 'schedspot' ); ?>" 
                                   rows="1"></textarea>
-                        
-                        <button type="submit" class="send-button" title="<?php esc_attr_e( 'Send Message', 'schedspot' ); ?>">
+
+                        <button type="submit" class="schedspot-btn schedspot-btn-primary schedspot-btn-small" title="<?php esc_attr_e( 'Send Message', 'schedspot' ); ?>">
                             ➤
                         </button>
                     </div>
@@ -138,7 +138,7 @@ if ( ! defined( 'ABSPATH' ) ) {
             <div class="no-conversation-content">
                 <h3><?php _e( 'Select a Conversation', 'schedspot' ); ?></h3>
                 <p><?php _e( 'Choose a conversation from the sidebar to start messaging.', 'schedspot' ); ?></p>
-                
+
                 <?php if ( empty( $conversations ) ) : ?>
                     <div class="getting-started">
                         <h4><?php _e( 'Getting Started', 'schedspot' ); ?></h4>
@@ -148,7 +148,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                             <li><?php _e( 'Contacting clients about their bookings', 'schedspot' ); ?></li>
                             <li><?php _e( 'Responding to booking requests', 'schedspot' ); ?></li>
                         </ul>
-                        
+
                         <div class="quick-actions">
                             <a href="<?php echo home_url( '/?schedspot_action=booking_form' ); ?>" class="schedspot-btn schedspot-btn-primary">
                                 <?php _e( 'Book a Service', 'schedspot' ); ?>
@@ -169,21 +169,21 @@ if ( ! defined( 'ABSPATH' ) ) {
     <?php if ( $target_conversation ) : ?>
         <div class="chat-info-header">
             <h4><?php _e( 'Chat Information', 'schedspot' ); ?></h4>
-            <button type="button" class="close-info" onclick="toggleChatInfo()">×</button>
+            <button type="button" class="schedspot-btn schedspot-btn-secondary schedspot-btn-small" onclick="toggleChatInfo()">×</button>
         </div>
-        
+
         <div class="chat-info-content">
             <div class="user-profile">
                 <img src="<?php echo esc_url( $target_conversation['user']['avatar'] ); ?>" alt="<?php echo esc_attr( $target_conversation['user']['name'] ); ?>" class="profile-avatar">
                 <h5><?php echo esc_html( $target_conversation['user']['name'] ); ?></h5>
             </div>
-            
+
             <div class="conversation-stats">
                 <h6><?php _e( 'Conversation Stats', 'schedspot' ); ?></h6>
                 <p><?php printf( __( 'Messages: %d', 'schedspot' ), count( $target_conversation['messages'] ) ); ?></p>
                 <p><?php printf( __( 'Started: %s', 'schedspot' ), date( 'M j, Y', strtotime( $target_conversation['messages'][0]['created_at'] ?? 'now' ) ) ); ?></p>
             </div>
-            
+
             <div class="conversation-actions">
                 <button type="button" class="schedspot-btn schedspot-btn-secondary" onclick="exportConversation()">
                     <?php _e( 'Export Chat', 'schedspot' ); ?>
@@ -204,18 +204,18 @@ document.addEventListener('DOMContentLoaded', function() {
     if (messagesContainer) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
-    
+
     // Search functionality
     const searchInput = document.getElementById('conversation-search');
     if (searchInput) {
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
             const conversations = document.querySelectorAll('.schedspot-conversation-item');
-            
+
             conversations.forEach(conversation => {
                 const name = conversation.querySelector('.user-name').textContent.toLowerCase();
                 const lastMessage = conversation.querySelector('.last-message').textContent.toLowerCase();
-                
+
                 if (name.includes(searchTerm) || lastMessage.includes(searchTerm)) {
                     conversation.style.display = '';
                 } else {
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function toggleChatInfo() {
     const sidebar = document.getElementById('chat-info-sidebar');
     const chatArea = document.querySelector('.schedspot-chat-area');
-    
+
     if (sidebar.style.display === 'none' || sidebar.style.display === '') {
         sidebar.style.display = 'block';
         chatArea.style.marginRight = '300px';

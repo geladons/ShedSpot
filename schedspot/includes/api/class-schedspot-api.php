@@ -1283,7 +1283,6 @@ class SchedSpot_API {
             $table_name = $wpdb->prefix . 'schedspot_worker_services';
             if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) != $table_name ) {
                 // Table doesn't exist, fall back to all workers
-                error_log( 'SchedSpot: worker_services table does not exist, returning all workers' );
                 $users = get_users( array( 'role' => 'schedspot_worker' ) );
             } else {
                 $worker_ids = $wpdb->get_col( $wpdb->prepare(
@@ -1294,7 +1293,6 @@ class SchedSpot_API {
 
                 if ( empty( $worker_ids ) ) {
                     // No workers assigned to this service, return all workers as fallback
-                    error_log( 'SchedSpot: No workers assigned to service ' . $service_id . ', returning all workers' );
                     $users = get_users( array( 'role' => 'schedspot_worker' ) );
                 } else {
                     $users = get_users( array(
@@ -1312,9 +1310,6 @@ class SchedSpot_API {
         foreach ( $users as $user ) {
             $data[] = $this->prepare_worker_for_response( $user, $service_id );
         }
-
-        // Log for debugging
-        error_log( 'SchedSpot API: Returning ' . count( $data ) . ' workers for service_id: ' . $service_id );
 
         return rest_ensure_response( $data );
     }
