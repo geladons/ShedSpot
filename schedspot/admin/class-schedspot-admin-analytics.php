@@ -1,8 +1,6 @@
 <?php
 /**
- * SchedSpot Admin Analytics Dashboard
- *
- * Handles analytics and reporting functionality
+ * Admin Analytics and Reporting Class
  *
  * @package SchedSpot
  * @version 1.0.0
@@ -15,6 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * SchedSpot_Admin_Analytics Class.
+ *
+ * Handles analytics, reporting, and statistics in the admin area.
  *
  * @class SchedSpot_Admin_Analytics
  * @version 1.0.0
@@ -31,12 +31,14 @@ class SchedSpot_Admin_Analytics {
     }
 
     /**
-     * Initialize analytics admin functionality.
+     * Initialize analytics functionality.
      *
      * @since 1.0.0
      */
     public function init() {
-        // No hooks needed here - this class is called by SchedSpot_Admin
+        add_action( 'wp_ajax_schedspot_refresh_stats', array( $this, 'handle_refresh_stats' ) );
+        add_action( 'wp_ajax_schedspot_export_report', array( $this, 'handle_export_report' ) );
+        add_action( 'wp_ajax_schedspot_get_chart_data', array( $this, 'handle_get_chart_data' ) );
     }
 
     /**
@@ -44,435 +46,448 @@ class SchedSpot_Admin_Analytics {
      *
      * @since 1.0.0
      */
-    public function analytics_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e( 'SchedSpot Analytics', 'schedspot' ); ?></h1>
-            
-            <div class="schedspot-analytics-dashboard">
-                <?php $this->render_overview_stats(); ?>
-                <?php $this->render_charts_section(); ?>
-                <?php $this->render_detailed_reports(); ?>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render overview statistics.
-     *
-     * @since 1.0.0
-     */
-    private function render_overview_stats() {
-        $stats = $this->get_overview_stats();
-        ?>
-        <div class="analytics-overview">
-            <h2><?php _e( 'Overview', 'schedspot' ); ?></h2>
-            
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">📅</div>
-                    <div class="stat-content">
-                        <div class="stat-number"><?php echo esc_html( number_format( $stats['total_bookings'] ) ); ?></div>
-                        <div class="stat-label"><?php _e( 'Total Bookings', 'schedspot' ); ?></div>
-                        <div class="stat-change <?php echo $stats['bookings_change'] >= 0 ? 'positive' : 'negative'; ?>">
-                            <?php echo $stats['bookings_change'] >= 0 ? '+' : ''; ?><?php echo esc_html( $stats['bookings_change'] ); ?>%
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon">💰</div>
-                    <div class="stat-content">
-                        <div class="stat-number">$<?php echo esc_html( number_format( $stats['total_revenue'], 2 ) ); ?></div>
-                        <div class="stat-label"><?php _e( 'Total Revenue', 'schedspot' ); ?></div>
-                        <div class="stat-change <?php echo $stats['revenue_change'] >= 0 ? 'positive' : 'negative'; ?>">
-                            <?php echo $stats['revenue_change'] >= 0 ? '+' : ''; ?><?php echo esc_html( $stats['revenue_change'] ); ?>%
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon">👥</div>
-                    <div class="stat-content">
-                        <div class="stat-number"><?php echo esc_html( number_format( $stats['active_workers'] ) ); ?></div>
-                        <div class="stat-label"><?php _e( 'Active Workers', 'schedspot' ); ?></div>
-                        <div class="stat-change <?php echo $stats['workers_change'] >= 0 ? 'positive' : 'negative'; ?>">
-                            <?php echo $stats['workers_change'] >= 0 ? '+' : ''; ?><?php echo esc_html( $stats['workers_change'] ); ?>%
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon">🎯</div>
-                    <div class="stat-content">
-                        <div class="stat-number"><?php echo esc_html( number_format( $stats['completion_rate'], 1 ) ); ?>%</div>
-                        <div class="stat-label"><?php _e( 'Completion Rate', 'schedspot' ); ?></div>
-                        <div class="stat-change <?php echo $stats['completion_change'] >= 0 ? 'positive' : 'negative'; ?>">
-                            <?php echo $stats['completion_change'] >= 0 ? '+' : ''; ?><?php echo esc_html( $stats['completion_change'] ); ?>%
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <style>
-        .analytics-overview {
-            margin-bottom: 30px;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .stat-card {
-            background: #fff;
-            border: 1px solid #ccd0d4;
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .stat-icon {
-            font-size: 2.5em;
-            opacity: 0.8;
-        }
-        .stat-content {
-            flex: 1;
-        }
-        .stat-number {
-            font-size: 2em;
-            font-weight: 700;
-            color: #0073aa;
-            line-height: 1;
-        }
-        .stat-label {
-            font-size: 0.9em;
-            color: #666;
-            margin-top: 5px;
-        }
-        .stat-change {
-            font-size: 0.85em;
-            font-weight: 600;
-            margin-top: 5px;
-        }
-        .stat-change.positive { color: #46b450; }
-        .stat-change.negative { color: #dc3232; }
-        </style>
-        <?php
-    }
-
-    /**
-     * Render charts section.
-     *
-     * @since 1.0.0
-     */
-    private function render_charts_section() {
-        ?>
-        <div class="analytics-charts">
-            <h2><?php _e( 'Performance Charts', 'schedspot' ); ?></h2>
-            
-            <div class="charts-grid">
-                <div class="chart-container">
-                    <h3><?php _e( 'Bookings Over Time', 'schedspot' ); ?></h3>
-                    <div class="chart-placeholder">
-                        <canvas id="bookings-chart" width="400" height="200"></canvas>
-                        <p class="chart-fallback"><?php _e( 'Chart visualization will be implemented with Chart.js', 'schedspot' ); ?></p>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <h3><?php _e( 'Revenue Trends', 'schedspot' ); ?></h3>
-                    <div class="chart-placeholder">
-                        <canvas id="revenue-chart" width="400" height="200"></canvas>
-                        <p class="chart-fallback"><?php _e( 'Chart visualization will be implemented with Chart.js', 'schedspot' ); ?></p>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <h3><?php _e( 'Service Popularity', 'schedspot' ); ?></h3>
-                    <div class="chart-placeholder">
-                        <canvas id="services-chart" width="400" height="200"></canvas>
-                        <p class="chart-fallback"><?php _e( 'Chart visualization will be implemented with Chart.js', 'schedspot' ); ?></p>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <h3><?php _e( 'Worker Performance', 'schedspot' ); ?></h3>
-                    <div class="chart-placeholder">
-                        <canvas id="workers-chart" width="400" height="200"></canvas>
-                        <p class="chart-fallback"><?php _e( 'Chart visualization will be implemented with Chart.js', 'schedspot' ); ?></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <style>
-        .analytics-charts {
-            margin-bottom: 30px;
-        }
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .chart-container {
-            background: #fff;
-            border: 1px solid #ccd0d4;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .chart-container h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #333;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        .chart-placeholder {
-            min-height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f9f9f9;
-            border-radius: 4px;
-        }
-        .chart-fallback {
-            color: #666;
-            font-style: italic;
-            text-align: center;
-        }
-        </style>
-        <?php
-    }
-
-    /**
-     * Render detailed reports section.
-     *
-     * @since 1.0.0
-     */
-    private function render_detailed_reports() {
-        $reports = $this->get_detailed_reports();
-        ?>
-        <div class="analytics-reports">
-            <h2><?php _e( 'Detailed Reports', 'schedspot' ); ?></h2>
-            
-            <div class="reports-grid">
-                <div class="report-section">
-                    <h3><?php _e( 'Top Services', 'schedspot' ); ?></h3>
-                    <table class="wp-list-table widefat fixed striped">
-                        <thead>
-                            <tr>
-                                <th><?php _e( 'Service', 'schedspot' ); ?></th>
-                                <th><?php _e( 'Bookings', 'schedspot' ); ?></th>
-                                <th><?php _e( 'Revenue', 'schedspot' ); ?></th>
-                                <th><?php _e( 'Avg Rating', 'schedspot' ); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ( $reports['top_services'] as $service ) : ?>
-                                <tr>
-                                    <td><?php echo esc_html( $service['name'] ); ?></td>
-                                    <td><?php echo esc_html( $service['bookings'] ); ?></td>
-                                    <td>$<?php echo esc_html( number_format( $service['revenue'], 2 ) ); ?></td>
-                                    <td><?php echo esc_html( number_format( $service['rating'], 1 ) ); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="report-section">
-                    <h3><?php _e( 'Top Workers', 'schedspot' ); ?></h3>
-                    <table class="wp-list-table widefat fixed striped">
-                        <thead>
-                            <tr>
-                                <th><?php _e( 'Worker', 'schedspot' ); ?></th>
-                                <th><?php _e( 'Bookings', 'schedspot' ); ?></th>
-                                <th><?php _e( 'Revenue', 'schedspot' ); ?></th>
-                                <th><?php _e( 'Rating', 'schedspot' ); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ( $reports['top_workers'] as $worker ) : ?>
-                                <tr>
-                                    <td><?php echo esc_html( $worker['name'] ); ?></td>
-                                    <td><?php echo esc_html( $worker['bookings'] ); ?></td>
-                                    <td>$<?php echo esc_html( number_format( $worker['revenue'], 2 ) ); ?></td>
-                                    <td><?php echo esc_html( number_format( $worker['rating'], 1 ) ); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="report-section">
-                    <h3><?php _e( 'Recent Activity', 'schedspot' ); ?></h3>
-                    <div class="activity-list">
-                        <?php foreach ( $reports['recent_activity'] as $activity ) : ?>
-                            <div class="activity-item">
-                                <div class="activity-icon"><?php echo esc_html( $activity['icon'] ); ?></div>
-                                <div class="activity-content">
-                                    <div class="activity-text"><?php echo esc_html( $activity['text'] ); ?></div>
-                                    <div class="activity-time"><?php echo esc_html( $activity['time'] ); ?></div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <div class="report-section">
-                    <h3><?php _e( 'Export Options', 'schedspot' ); ?></h3>
-                    <div class="export-options">
-                        <p><?php _e( 'Export your data for further analysis:', 'schedspot' ); ?></p>
-                        <div class="export-buttons">
-                            <button class="button button-primary" onclick="exportData('bookings')"><?php _e( 'Export Bookings', 'schedspot' ); ?></button>
-                            <button class="button button-primary" onclick="exportData('revenue')"><?php _e( 'Export Revenue', 'schedspot' ); ?></button>
-                            <button class="button button-primary" onclick="exportData('workers')"><?php _e( 'Export Workers', 'schedspot' ); ?></button>
-                            <button class="button button-primary" onclick="exportData('services')"><?php _e( 'Export Services', 'schedspot' ); ?></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <style>
-        .analytics-reports {
-            margin-bottom: 30px;
-        }
-        .reports-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .report-section {
-            background: #fff;
-            border: 1px solid #ccd0d4;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .report-section h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #333;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        .activity-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .activity-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-        .activity-icon {
-            font-size: 1.2em;
-            width: 30px;
-            text-align: center;
-        }
-        .activity-content {
-            flex: 1;
-        }
-        .activity-text {
-            font-size: 0.9em;
-            color: #333;
-        }
-        .activity-time {
-            font-size: 0.8em;
-            color: #666;
-            margin-top: 2px;
-        }
-        .export-options {
-            text-align: center;
-        }
-        .export-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 15px;
-        }
-        .export-buttons .button {
-            flex: 1;
-            min-width: 120px;
-        }
-        </style>
-
-        <script>
-        function exportData(type) {
-            // This would implement actual data export functionality
-            alert('Export ' + type + ' data - functionality to be implemented');
-        }
-        </script>
-        <?php
+    public static function analytics_page() {
+        $instance = new self();
+        
+        // Get date range from request
+        $date_from = isset( $_GET['date_from'] ) ? sanitize_text_field( $_GET['date_from'] ) : date( 'Y-m-01' );
+        $date_to = isset( $_GET['date_to'] ) ? sanitize_text_field( $_GET['date_to'] ) : date( 'Y-m-t' );
+        
+        // Get analytics data
+        $overview_stats = $instance->get_overview_stats( $date_from, $date_to );
+        $booking_trends = $instance->get_booking_trends( $date_from, $date_to );
+        $worker_performance = $instance->get_worker_performance( $date_from, $date_to );
+        $service_popularity = $instance->get_service_popularity( $date_from, $date_to );
+        $revenue_data = $instance->get_revenue_data( $date_from, $date_to );
+        
+        // Load template
+        include SCHEDSPOT_PLUGIN_DIR . 'templates/admin/analytics.php';
     }
 
     /**
      * Get overview statistics.
      *
      * @since 1.0.0
-     * @return array Statistics data.
+     * @param string $date_from Start date.
+     * @param string $date_to   End date.
+     * @return array Overview statistics.
      */
-    private function get_overview_stats() {
-        // This would fetch real data from the database
-        // For now, returning sample data
+    private function get_overview_stats( $date_from, $date_to ) {
+        global $wpdb;
+        
+        $stats = array();
+        
+        // Total bookings
+        $stats['total_bookings'] = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s",
+            $date_from, $date_to
+        ) );
+        
+        // Confirmed bookings
+        $stats['confirmed_bookings'] = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s AND status = 'confirmed'",
+            $date_from, $date_to
+        ) );
+        
+        // Completed bookings
+        $stats['completed_bookings'] = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s AND status = 'completed'",
+            $date_from, $date_to
+        ) );
+        
+        // Cancelled bookings
+        $stats['cancelled_bookings'] = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s AND status = 'cancelled'",
+            $date_from, $date_to
+        ) );
+        
+        // Total revenue
+        $stats['total_revenue'] = $wpdb->get_var( $wpdb->prepare(
+            "SELECT SUM(total_price) FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s AND status IN ('confirmed', 'completed')",
+            $date_from, $date_to
+        ) ) ?: 0;
+        
+        // Average booking value
+        $stats['average_booking_value'] = $stats['confirmed_bookings'] > 0 ? 
+            $stats['total_revenue'] / $stats['confirmed_bookings'] : 0;
+        
+        // Active workers
+        $stats['active_workers'] = count( get_users( array(
+            'role' => 'schedspot_worker',
+            'meta_query' => array(
+                array(
+                    'key' => 'schedspot_is_available',
+                    'value' => '1',
+                    'compare' => '='
+                )
+            )
+        ) ) );
+        
+        // Total customers
+        $stats['total_customers'] = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(DISTINCT JSON_UNQUOTE(JSON_EXTRACT(client_details, '$.email'))) 
+             FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s",
+            $date_from, $date_to
+        ) );
+        
+        return $stats;
+    }
+
+    /**
+     * Get booking trends data.
+     *
+     * @since 1.0.0
+     * @param string $date_from Start date.
+     * @param string $date_to   End date.
+     * @return array Booking trends data.
+     */
+    private function get_booking_trends( $date_from, $date_to ) {
+        global $wpdb;
+        
+        $trends = $wpdb->get_results( $wpdb->prepare(
+            "SELECT DATE(booking_date) as date, 
+                    COUNT(*) as total_bookings,
+                    SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_bookings,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_bookings,
+                    SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_bookings
+             FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s
+             GROUP BY DATE(booking_date)
+             ORDER BY date ASC",
+            $date_from, $date_to
+        ) );
+        
+        return $trends;
+    }
+
+    /**
+     * Get worker performance data.
+     *
+     * @since 1.0.0
+     * @param string $date_from Start date.
+     * @param string $date_to   End date.
+     * @return array Worker performance data.
+     */
+    private function get_worker_performance( $date_from, $date_to ) {
+        global $wpdb;
+        
+        $performance = $wpdb->get_results( $wpdb->prepare(
+            "SELECT b.worker_id,
+                    u.display_name as worker_name,
+                    COUNT(*) as total_bookings,
+                    SUM(CASE WHEN b.status = 'completed' THEN 1 ELSE 0 END) as completed_bookings,
+                    SUM(CASE WHEN b.status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_bookings,
+                    SUM(CASE WHEN b.status IN ('confirmed', 'completed') THEN b.total_price ELSE 0 END) as total_revenue,
+                    AVG(CASE WHEN b.status IN ('confirmed', 'completed') THEN b.total_price ELSE NULL END) as avg_booking_value
+             FROM {$wpdb->prefix}schedspot_bookings b
+             LEFT JOIN {$wpdb->users} u ON b.worker_id = u.ID
+             WHERE b.booking_date BETWEEN %s AND %s
+             GROUP BY b.worker_id, u.display_name
+             ORDER BY total_revenue DESC",
+            $date_from, $date_to
+        ) );
+        
+        return $performance;
+    }
+
+    /**
+     * Get service popularity data.
+     *
+     * @since 1.0.0
+     * @param string $date_from Start date.
+     * @param string $date_to   End date.
+     * @return array Service popularity data.
+     */
+    private function get_service_popularity( $date_from, $date_to ) {
+        global $wpdb;
+        
+        $popularity = $wpdb->get_results( $wpdb->prepare(
+            "SELECT s.name as service_name,
+                    COUNT(b.id) as booking_count,
+                    SUM(CASE WHEN b.status IN ('confirmed', 'completed') THEN b.total_price ELSE 0 END) as total_revenue,
+                    AVG(CASE WHEN b.status IN ('confirmed', 'completed') THEN b.total_price ELSE NULL END) as avg_price
+             FROM {$wpdb->prefix}schedspot_bookings b
+             LEFT JOIN {$wpdb->prefix}schedspot_services s ON b.service_id = s.id
+             WHERE b.booking_date BETWEEN %s AND %s
+             GROUP BY b.service_id, s.name
+             ORDER BY booking_count DESC",
+            $date_from, $date_to
+        ) );
+        
+        return $popularity;
+    }
+
+    /**
+     * Get revenue data.
+     *
+     * @since 1.0.0
+     * @param string $date_from Start date.
+     * @param string $date_to   End date.
+     * @return array Revenue data.
+     */
+    private function get_revenue_data( $date_from, $date_to ) {
+        global $wpdb;
+        
+        $revenue = $wpdb->get_results( $wpdb->prepare(
+            "SELECT DATE(booking_date) as date,
+                    SUM(CASE WHEN status IN ('confirmed', 'completed') THEN total_price ELSE 0 END) as daily_revenue,
+                    COUNT(CASE WHEN status IN ('confirmed', 'completed') THEN 1 ELSE NULL END) as paid_bookings
+             FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s
+             GROUP BY DATE(booking_date)
+             ORDER BY date ASC",
+            $date_from, $date_to
+        ) );
+        
+        return $revenue;
+    }
+
+    /**
+     * Get conversion rates.
+     *
+     * @since 1.0.0
+     * @param string $date_from Start date.
+     * @param string $date_to   End date.
+     * @return array Conversion rates.
+     */
+    private function get_conversion_rates( $date_from, $date_to ) {
+        global $wpdb;
+        
+        $total_bookings = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s",
+            $date_from, $date_to
+        ) );
+        
+        $confirmed_bookings = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s AND status = 'confirmed'",
+            $date_from, $date_to
+        ) );
+        
+        $completed_bookings = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings 
+             WHERE booking_date BETWEEN %s AND %s AND status = 'completed'",
+            $date_from, $date_to
+        ) );
+        
         return array(
-            'total_bookings' => 1247,
-            'bookings_change' => 12.5,
-            'total_revenue' => 45678.90,
-            'revenue_change' => 8.3,
-            'active_workers' => 23,
-            'workers_change' => 4.2,
-            'completion_rate' => 94.7,
-            'completion_change' => 2.1,
+            'booking_to_confirmed' => $total_bookings > 0 ? ($confirmed_bookings / $total_bookings) * 100 : 0,
+            'confirmed_to_completed' => $confirmed_bookings > 0 ? ($completed_bookings / $confirmed_bookings) * 100 : 0,
+            'booking_to_completed' => $total_bookings > 0 ? ($completed_bookings / $total_bookings) * 100 : 0,
         );
     }
 
     /**
-     * Get detailed reports data.
+     * Handle refresh stats AJAX.
      *
      * @since 1.0.0
-     * @return array Reports data.
      */
-    private function get_detailed_reports() {
-        // This would fetch real data from the database
-        // For now, returning sample data
-        return array(
-            'top_services' => array(
-                array( 'name' => 'House Cleaning', 'bookings' => 156, 'revenue' => 7800.00, 'rating' => 4.8 ),
-                array( 'name' => 'Lawn Care', 'bookings' => 134, 'revenue' => 6700.00, 'rating' => 4.6 ),
-                array( 'name' => 'Handyman', 'bookings' => 98, 'revenue' => 4900.00, 'rating' => 4.7 ),
-                array( 'name' => 'Pet Sitting', 'bookings' => 87, 'revenue' => 2610.00, 'rating' => 4.9 ),
-                array( 'name' => 'Tutoring', 'bookings' => 76, 'revenue' => 3800.00, 'rating' => 4.5 ),
-            ),
-            'top_workers' => array(
-                array( 'name' => 'John Smith', 'bookings' => 45, 'revenue' => 2250.00, 'rating' => 4.9 ),
-                array( 'name' => 'Sarah Johnson', 'bookings' => 38, 'revenue' => 1900.00, 'rating' => 4.8 ),
-                array( 'name' => 'Mike Wilson', 'bookings' => 34, 'revenue' => 1700.00, 'rating' => 4.7 ),
-                array( 'name' => 'Lisa Brown', 'bookings' => 31, 'revenue' => 1550.00, 'rating' => 4.8 ),
-                array( 'name' => 'David Lee', 'bookings' => 28, 'revenue' => 1400.00, 'rating' => 4.6 ),
-            ),
-            'recent_activity' => array(
-                array( 'icon' => '📅', 'text' => 'New booking created by Jane Doe', 'time' => '2 minutes ago' ),
-                array( 'icon' => '✅', 'text' => 'Booking #1234 completed by John Smith', 'time' => '15 minutes ago' ),
-                array( 'icon' => '💰', 'text' => 'Payment received for booking #1233', 'time' => '1 hour ago' ),
-                array( 'icon' => '👤', 'text' => 'New worker registered: Alex Turner', 'time' => '2 hours ago' ),
-                array( 'icon' => '⭐', 'text' => 'New 5-star review received', 'time' => '3 hours ago' ),
-            ),
-        );
+    public function handle_refresh_stats() {
+        if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_refresh_stats' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
+        }
+        
+        $date_from = isset( $_POST['date_from'] ) ? sanitize_text_field( $_POST['date_from'] ) : date( 'Y-m-01' );
+        $date_to = isset( $_POST['date_to'] ) ? sanitize_text_field( $_POST['date_to'] ) : date( 'Y-m-t' );
+        
+        $stats = $this->get_overview_stats( $date_from, $date_to );
+        
+        ob_start();
+        include SCHEDSPOT_PLUGIN_DIR . 'templates/admin/analytics-stats-widget.php';
+        $html = ob_get_clean();
+        
+        wp_send_json_success( array( 'html' => $html ) );
+    }
+
+    /**
+     * Handle export report AJAX.
+     *
+     * @since 1.0.0
+     */
+    public function handle_export_report() {
+        if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_export_report' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
+        }
+        
+        $report_type = sanitize_text_field( $_POST['report_type'] );
+        $date_from = sanitize_text_field( $_POST['date_from'] );
+        $date_to = sanitize_text_field( $_POST['date_to'] );
+        
+        $export_url = $this->generate_export_report( $report_type, $date_from, $date_to );
+        
+        if ( $export_url ) {
+            wp_send_json_success( array( 
+                'download_url' => $export_url,
+                'message' => __( 'Report generated successfully.', 'schedspot' )
+            ) );
+        } else {
+            wp_send_json_error( array( 'message' => __( 'Failed to generate report.', 'schedspot' ) ) );
+        }
+    }
+
+    /**
+     * Handle get chart data AJAX.
+     *
+     * @since 1.0.0
+     */
+    public function handle_get_chart_data() {
+        if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_get_chart_data' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
+        }
+        
+        $chart_type = sanitize_text_field( $_POST['chart_type'] );
+        $date_from = sanitize_text_field( $_POST['date_from'] );
+        $date_to = sanitize_text_field( $_POST['date_to'] );
+        
+        $data = array();
+        
+        switch ( $chart_type ) {
+            case 'booking_trends':
+                $data = $this->get_booking_trends( $date_from, $date_to );
+                break;
+            case 'revenue_data':
+                $data = $this->get_revenue_data( $date_from, $date_to );
+                break;
+            case 'service_popularity':
+                $data = $this->get_service_popularity( $date_from, $date_to );
+                break;
+            case 'worker_performance':
+                $data = $this->get_worker_performance( $date_from, $date_to );
+                break;
+        }
+        
+        wp_send_json_success( array( 'data' => $data ) );
+    }
+
+    /**
+     * Generate export report.
+     *
+     * @since 1.0.0
+     * @param string $report_type Report type.
+     * @param string $date_from   Start date.
+     * @param string $date_to     End date.
+     * @return string|false Export URL or false on failure.
+     */
+    private function generate_export_report( $report_type, $date_from, $date_to ) {
+        $upload_dir = wp_upload_dir();
+        $export_dir = $upload_dir['basedir'] . '/schedspot-exports/';
+        
+        if ( ! file_exists( $export_dir ) ) {
+            wp_mkdir_p( $export_dir );
+        }
+        
+        $filename = 'schedspot-' . $report_type . '-' . $date_from . '-to-' . $date_to . '-' . time() . '.csv';
+        $filepath = $export_dir . $filename;
+        
+        $data = array();
+        
+        switch ( $report_type ) {
+            case 'bookings':
+                $data = $this->get_bookings_export_data( $date_from, $date_to );
+                break;
+            case 'revenue':
+                $data = $this->get_revenue_export_data( $date_from, $date_to );
+                break;
+            case 'workers':
+                $data = $this->get_workers_export_data( $date_from, $date_to );
+                break;
+        }
+        
+        if ( $this->write_csv_file( $filepath, $data ) ) {
+            return $upload_dir['baseurl'] . '/schedspot-exports/' . $filename;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Get bookings export data.
+     *
+     * @since 1.0.0
+     * @param string $date_from Start date.
+     * @param string $date_to   End date.
+     * @return array Export data.
+     */
+    private function get_bookings_export_data( $date_from, $date_to ) {
+        global $wpdb;
+        
+        return $wpdb->get_results( $wpdb->prepare(
+            "SELECT b.id, b.booking_date, b.booking_time, b.status, b.total_price,
+                    JSON_UNQUOTE(JSON_EXTRACT(b.client_details, '$.name')) as client_name,
+                    JSON_UNQUOTE(JSON_EXTRACT(b.client_details, '$.email')) as client_email,
+                    u.display_name as worker_name,
+                    s.name as service_name,
+                    b.created_at
+             FROM {$wpdb->prefix}schedspot_bookings b
+             LEFT JOIN {$wpdb->users} u ON b.worker_id = u.ID
+             LEFT JOIN {$wpdb->prefix}schedspot_services s ON b.service_id = s.id
+             WHERE b.booking_date BETWEEN %s AND %s
+             ORDER BY b.created_at DESC",
+            $date_from, $date_to
+        ), ARRAY_A );
+    }
+
+    /**
+     * Get revenue export data.
+     *
+     * @since 1.0.0
+     * @param string $date_from Start date.
+     * @param string $date_to   End date.
+     * @return array Export data.
+     */
+    private function get_revenue_export_data( $date_from, $date_to ) {
+        return $this->get_revenue_data( $date_from, $date_to );
+    }
+
+    /**
+     * Get workers export data.
+     *
+     * @since 1.0.0
+     * @param string $date_from Start date.
+     * @param string $date_to   End date.
+     * @return array Export data.
+     */
+    private function get_workers_export_data( $date_from, $date_to ) {
+        return $this->get_worker_performance( $date_from, $date_to );
+    }
+
+    /**
+     * Write CSV file.
+     *
+     * @since 1.0.0
+     * @param string $filepath File path.
+     * @param array  $data     Data to write.
+     * @return bool Success status.
+     */
+    private function write_csv_file( $filepath, $data ) {
+        if ( empty( $data ) ) {
+            return false;
+        }
+        
+        $file = fopen( $filepath, 'w' );
+        
+        if ( ! $file ) {
+            return false;
+        }
+        
+        // Write headers
+        $headers = array_keys( (array) $data[0] );
+        fputcsv( $file, $headers );
+        
+        // Write data
+        foreach ( $data as $row ) {
+            fputcsv( $file, (array) $row );
+        }
+        
+        fclose( $file );
+        
+        return true;
     }
 }

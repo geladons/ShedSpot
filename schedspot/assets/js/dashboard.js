@@ -1,6 +1,6 @@
 /**
  * SchedSpot Dashboard JavaScript
- * 
+ *
  * @package SchedSpot
  * @version 1.0.0
  */
@@ -8,405 +8,347 @@
 (function($) {
     'use strict';
 
-    // Global variables
-    let currentUserRole = null;
-    let dashboardData = {};
-    let refreshInterval = null;
+    // Initialize when document is ready
+    $(document).ready(function() {
+        initDashboard();
+        initAvailabilityToggle();
+        initBookingActions();
+        initPaymentRequests();
+        initModalHandlers();
+    });
 
     /**
      * Initialize dashboard functionality
      */
     function initDashboard() {
-        // Get current user role
-        currentUserRole = $('#schedspot-dashboard').data('user-role') || 'customer';
-        
-        // Initialize based on user role
-        if (currentUserRole === 'schedspot_worker') {
-            initWorkerDashboard();
-        } else {
-            initCustomerDashboard();
-        }
+        // Auto-refresh dashboard data every 5 minutes
+        setInterval(function() {
+            refreshDashboardData();
+        }, 300000);
 
-        // Common dashboard functionality
-        initCommonDashboard();
+        // Initialize tooltips
+        initTooltips();
+
+        // Initialize status filters
+        initStatusFilters();
     }
 
     /**
-     * Initialize worker dashboard
+     * Initialize availability toggle
      */
-    function initWorkerDashboard() {
-        // Availability toggle
-        $('.availability-toggle').on('click', toggleAvailability);
-        
-        // Settings modal
-        $('.open-settings-modal').on('click', openSettingsModal);
-        $('.close-settings-modal').on('click', closeSettingsModal);
-        
-        // Settings form submission
-        $('#worker-settings-form').on('submit', handleSettingsSubmission);
-        
-        // Schedule management
-        $('.schedule-slot').on('click', handleScheduleSlotClick);
-        
-        // Service management
-        $('.service-toggle').on('change', handleServiceToggle);
-        $('.custom-price-input').on('blur', handleCustomPriceChange);
-        
-        // Payment requests
-        $('.request-deposit-btn').on('click', handleDepositRequest);
-        $('.request-progress-btn').on('click', handleProgressPayment);
-        $('.request-final-btn').on('click', handleFinalPayment);
-        $('.generate-invoice-btn').on('click', handleInvoiceGeneration);
-    }
+    function initAvailabilityToggle() {
+        // Handle new dashboard availability toggle button
+        $('.availability-toggle-btn').on('click', function() {
+            var $button = $(this);
+            var workerId = $button.data('worker-id');
 
-    /**
-     * Initialize customer dashboard
-     */
-    function initCustomerDashboard() {
-        // Booking actions
-        $('.cancel-booking-btn').on('click', handleBookingCancellation);
-        $('.reschedule-booking-btn').on('click', handleBookingReschedule);
-        $('.review-booking-btn').on('click', handleBookingReview);
-        
-        // Message actions
-        $('.message-worker-btn').on('click', handleMessageWorker);
-    }
-
-    /**
-     * Initialize common dashboard functionality
-     */
-    function initCommonDashboard() {
-        // Refresh data periodically
-        refreshInterval = setInterval(refreshDashboardData, 30000); // 30 seconds
-        
-        // Tab switching
-        $('.dashboard-tab').on('click', handleTabSwitch);
-        
-        // Search and filters
-        $('.dashboard-search').on('input', handleSearch);
-        $('.dashboard-filter').on('change', handleFilter);
-        
-        // Pagination
-        $('.pagination-btn').on('click', handlePagination);
-        
-        // Modal handling
-        $('.modal-close').on('click', closeModal);
-        $(document).on('click', '.modal-overlay', closeModal);
-        
-        // Escape key to close modals
-        $(document).on('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeModal();
+            if (!workerId) {
+                showNotification('Worker ID not found.', 'error');
+                return;
             }
-        });
-    }
 
-    /**
-     * Toggle worker availability
-     */
-    function toggleAvailability() {
-        const $toggle = $(this);
-        const $status = $('#availability-status');
-        const currentStatus = $status.hasClass('available');
-        const newStatus = !currentStatus;
-        
-        // Show loading state
-        $toggle.prop('disabled', true);
-        $toggle.html('<span class="dashicons dashicons-update spin"></span> Updating...');
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'workers/profile',
-            method: 'POST',
-            data: {
-                available: newStatus ? 1 : 0
-            },
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Update UI
-                    $status.toggleClass('available', newStatus);
-                    $status.toggleClass('unavailable', !newStatus);
-                    $status.text(newStatus ? 'Available' : 'Unavailable');
-                    
-                    // Update toggle button
-                    $toggle.html(newStatus ? 'Go Offline' : 'Go Online');
-                    $toggle.toggleClass('btn-danger', newStatus);
-                    $toggle.toggleClass('btn-success', !newStatus);
-                    
-                    showNotification(
-                        newStatus ? 'You are now available for bookings' : 'You are now offline',
-                        'success'
-                    );
-                } else {
-                    showNotification('Failed to update availability', 'error');
-                }
-            },
-            error: function() {
-                showNotification('Error updating availability', 'error');
-            },
-            complete: function() {
-                $toggle.prop('disabled', false);
-            }
-        });
-    }
+            $button.prop('disabled', true).text('Updating...');
 
-    /**
-     * Open settings modal
-     */
-    function openSettingsModal() {
-        $('#worker-settings-modal').addClass('active');
-        $('body').addClass('modal-open');
-    }
-
-    /**
-     * Close settings modal
-     */
-    function closeSettingsModal() {
-        $('#worker-settings-modal').removeClass('active');
-        $('body').removeClass('modal-open');
-    }
-
-    /**
-     * Handle settings form submission
-     */
-    function handleSettingsSubmission(e) {
-        e.preventDefault();
-        
-        const $form = $(this);
-        const $submitBtn = $form.find('[type="submit"]');
-        const formData = new FormData(this);
-        
-        // Show loading state
-        $submitBtn.prop('disabled', true);
-        $submitBtn.html('<span class="dashicons dashicons-update spin"></span> Saving...');
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'workers/profile',
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    showNotification('Settings saved successfully', 'success');
-                    closeSettingsModal();
-                    // Refresh dashboard data
-                    refreshDashboardData();
-                } else {
-                    showNotification(response.message || 'Failed to save settings', 'error');
-                }
-            },
-            error: function() {
-                showNotification('Error saving settings', 'error');
-            },
-            complete: function() {
-                $submitBtn.prop('disabled', false);
-                $submitBtn.html('<span class="dashicons dashicons-yes"></span> Save Changes');
-            }
-        });
-    }
-
-    /**
-     * Handle schedule slot click
-     */
-    function handleScheduleSlotClick() {
-        const $slot = $(this);
-        const day = $slot.data('day');
-        const time = $slot.data('time');
-        const isAvailable = $slot.hasClass('available');
-        
-        // Toggle availability
-        $slot.toggleClass('available');
-        $slot.toggleClass('unavailable');
-        
-        // Update backend
-        updateScheduleSlot(day, time, !isAvailable);
-    }
-
-    /**
-     * Update schedule slot
-     */
-    function updateScheduleSlot(day, time, available) {
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'workers/schedule',
-            method: 'POST',
-            data: {
-                day: day,
-                time: time,
-                available: available ? 1 : 0
-            },
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (!response.success) {
-                    showNotification('Failed to update schedule', 'error');
-                    // Revert UI change
-                    const $slot = $(`.schedule-slot[data-day="${day}"][data-time="${time}"]`);
-                    $slot.toggleClass('available');
-                    $slot.toggleClass('unavailable');
-                }
-            },
-            error: function() {
-                showNotification('Error updating schedule', 'error');
-            }
-        });
-    }
-
-    /**
-     * Handle service toggle
-     */
-    function handleServiceToggle() {
-        const $toggle = $(this);
-        const serviceId = $toggle.data('service-id');
-        const enabled = $toggle.is(':checked');
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'workers/services',
-            method: 'POST',
-            data: {
-                service_id: serviceId,
-                enabled: enabled ? 1 : 0
-            },
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    showNotification(
-                        enabled ? 'Service enabled' : 'Service disabled',
-                        'success'
-                    );
-                } else {
-                    showNotification('Failed to update service', 'error');
-                    $toggle.prop('checked', !enabled);
-                }
-            },
-            error: function() {
-                showNotification('Error updating service', 'error');
-                $toggle.prop('checked', !enabled);
-            }
-        });
-    }
-
-    /**
-     * Handle custom price change
-     */
-    function handleCustomPriceChange() {
-        const $input = $(this);
-        const serviceId = $input.data('service-id');
-        const price = parseFloat($input.val()) || 0;
-        
-        if (price > 0) {
             $.ajax({
-                url: schedspot_frontend.rest_url + 'workers/services/price',
-                method: 'POST',
+                url: schedspot_frontend.ajax_url,
+                type: 'POST',
                 data: {
-                    service_id: serviceId,
-                    custom_price: price
-                },
-                beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
+                    action: 'schedspot_toggle_worker_availability',
+                    worker_id: workerId,
+                    nonce: schedspot_frontend.nonce
                 },
                 success: function(response) {
                     if (response.success) {
-                        $input.addClass('saved');
-                        setTimeout(() => $input.removeClass('saved'), 2000);
+                        // Update availability status
+                        var $status = $('.availability-status');
+                        var $icon = $status.find('.dashicons');
+
+                        if (response.data.is_available) {
+                            $status.removeClass('unavailable').addClass('available');
+                            $status.find('span:not(.dashicons)').text('Available for Bookings');
+                            $icon.removeClass('dashicons-dismiss').addClass('dashicons-yes-alt');
+                            $button.text('Set Unavailable');
+                        } else {
+                            $status.removeClass('available').addClass('unavailable');
+                            $status.find('span:not(.dashicons)').text('Currently Unavailable');
+                            $icon.removeClass('dashicons-yes-alt').addClass('dashicons-dismiss');
+                            $button.text('Set Available');
+                        }
+
+                        showNotification(response.data.message, 'success');
                     } else {
-                        showNotification('Failed to update price', 'error');
+                        showNotification(response.data.message || 'Failed to update availability.', 'error');
                     }
                 },
                 error: function() {
-                    showNotification('Error updating price', 'error');
+                    showNotification('Network error. Please try again.', 'error');
+                },
+                complete: function() {
+                    $button.prop('disabled', false);
                 }
             });
-        }
-    }
+        });
 
-    /**
-     * Handle tab switching
-     */
-    function handleTabSwitch(e) {
-        e.preventDefault();
-        
-        const $tab = $(this);
-        const targetTab = $tab.data('tab');
-        
-        // Update active tab
-        $('.dashboard-tab').removeClass('active');
-        $tab.addClass('active');
-        
-        // Show target content
-        $('.tab-content').removeClass('active');
-        $(`#${targetTab}`).addClass('active');
-        
-        // Load tab data if needed
-        loadTabData(targetTab);
-    }
+        // Legacy availability toggle function for backward compatibility
+        window.toggleAvailability = function() {
+            const restUrl = schedspot_frontend.rest_url + 'workers/' + schedspot_frontend.user_id + '/profile';
+            const nonce = schedspot_frontend.nonce;
+            const currentStatus = document.getElementById('availability-status').classList.contains('available');
+            const newStatus = !currentStatus;
 
-    /**
-     * Load tab data
-     */
-    function loadTabData(tab) {
-        // Implementation depends on specific tab requirements
-        switch (tab) {
-            case 'bookings':
-                loadBookings();
-                break;
-            case 'earnings':
-                loadEarnings();
-                break;
-            case 'messages':
-                loadMessages();
-                break;
-        }
-    }
+            // Show loading state
+            const toggleBtn = document.querySelector('.availability-toggle');
+            if (toggleBtn) {
+                toggleBtn.disabled = true;
+                toggleBtn.textContent = schedspot_frontend.strings.processing;
+            }
 
-    /**
-     * Refresh dashboard data
-     */
-    function refreshDashboardData() {
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'dashboard/data',
-            method: 'GET',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    updateDashboardUI(response.data);
+            fetch(restUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': nonce
+                },
+                body: JSON.stringify({
+                    is_available: newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI
+                    const statusElement = document.getElementById('availability-status');
+                    const statusText = document.getElementById('availability-text');
+                    
+                    if (newStatus) {
+                        statusElement.classList.add('available');
+                        statusElement.classList.remove('unavailable');
+                        statusText.textContent = schedspot_frontend.strings.available;
+                    } else {
+                        statusElement.classList.add('unavailable');
+                        statusElement.classList.remove('available');
+                        statusText.textContent = schedspot_frontend.strings.unavailable;
+                    }
+
+                    showNotification(data.message, 'success');
+                } else {
+                    showNotification(data.message || schedspot_frontend.strings.error, 'error');
                 }
-            },
-            error: function() {
-                // Silently fail for background refresh
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification(schedspot_frontend.strings.error, 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                if (toggleBtn) {
+                    toggleBtn.disabled = false;
+                    toggleBtn.textContent = newStatus ? 
+                        schedspot_frontend.strings.go_unavailable : 
+                        schedspot_frontend.strings.go_available;
+                }
+            });
+        };
+    }
+
+    /**
+     * Initialize booking actions
+     */
+    function initBookingActions() {
+        // Reschedule booking
+        window.rescheduleBooking = function(bookingId) {
+            // Create modal for rescheduling
+            const modal = createRescheduleModal(bookingId);
+            $('body').append(modal);
+        };
+
+        // Cancel booking
+        window.cancelBooking = function(bookingId) {
+            if (confirm(schedspot_frontend.strings.confirm_cancel)) {
+                updateBookingStatus(bookingId, 'cancelled');
+            }
+        };
+
+        // Complete booking
+        window.completeBooking = function(bookingId) {
+            if (confirm(schedspot_frontend.strings.confirm_complete)) {
+                updateBookingStatus(bookingId, 'completed');
+            }
+        };
+    }
+
+    /**
+     * Initialize payment request functions
+     */
+    function initPaymentRequests() {
+        window.requestDeposit = function(bookingId) {
+            if (confirm(schedspot_frontend.strings.confirm_deposit_request)) {
+                $.post(schedspot_frontend.ajax_url, {
+                    action: 'schedspot_request_deposit',
+                    booking_id: bookingId,
+                    nonce: schedspot_frontend.nonce
+                }, function(response) {
+                    if (response.success) {
+                        showNotification(response.data.message, 'success');
+                    } else {
+                        showNotification(response.data.message || schedspot_frontend.strings.error, 'error');
+                    }
+                });
+            }
+        };
+
+        window.requestProgress = function(bookingId) {
+            if (confirm(schedspot_frontend.strings.confirm_progress_request)) {
+                $.post(schedspot_frontend.ajax_url, {
+                    action: 'schedspot_request_progress_payment',
+                    booking_id: bookingId,
+                    nonce: schedspot_frontend.nonce
+                }, function(response) {
+                    if (response.success) {
+                        showNotification(response.data.message, 'success');
+                    } else {
+                        showNotification(response.data.message || schedspot_frontend.strings.error, 'error');
+                    }
+                });
+            }
+        };
+
+        window.requestFinalPayment = function(bookingId) {
+            if (confirm(schedspot_frontend.strings.confirm_final_request)) {
+                $.post(schedspot_frontend.ajax_url, {
+                    action: 'schedspot_request_final_payment',
+                    booking_id: bookingId,
+                    nonce: schedspot_frontend.nonce
+                }, function(response) {
+                    if (response.success) {
+                        showNotification(response.data.message, 'success');
+                    } else {
+                        showNotification(response.data.message || schedspot_frontend.strings.error, 'error');
+                    }
+                });
+            }
+        };
+    }
+
+    /**
+     * Initialize modal handlers
+     */
+    function initModalHandlers() {
+        // Close modal handler
+        $(document).on('click', '.schedspot-modal-close, .schedspot-modal-overlay', function(e) {
+            if (e.target === this) {
+                closeModal($(this));
+            }
+        });
+
+        // Escape key to close modal
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape') {
+                $('.schedspot-modal').remove();
             }
         });
     }
 
     /**
-     * Update dashboard UI with new data
+     * Update booking status
      */
-    function updateDashboardUI(data) {
-        // Update stats
-        if (data.stats) {
-            Object.keys(data.stats).forEach(function(key) {
-                $(`.stat-${key}`).text(data.stats[key]);
-            });
-        }
+    function updateBookingStatus(bookingId, status) {
+        $.post(schedspot_frontend.ajax_url, {
+            action: 'schedspot_update_booking_status',
+            booking_id: bookingId,
+            status: status,
+            nonce: schedspot_frontend.nonce
+        }, function(response) {
+            if (response.success) {
+                showNotification(response.data.message, 'success');
+                // Refresh the page or update the booking row
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            } else {
+                showNotification(response.data.message || schedspot_frontend.strings.error, 'error');
+            }
+        });
+    }
+
+    /**
+     * Create reschedule modal
+     */
+    function createRescheduleModal(bookingId) {
+        const modalHtml = `
+            <div class="schedspot-modal">
+                <div class="schedspot-modal-overlay"></div>
+                <div class="schedspot-modal-content">
+                    <div class="schedspot-modal-header">
+                        <h3>${schedspot_frontend.strings.reschedule_booking}</h3>
+                        <button class="schedspot-modal-close">&times;</button>
+                    </div>
+                    <div class="schedspot-modal-body">
+                        <form id="reschedule-form">
+                            <div class="schedspot-form-group">
+                                <label for="new_date">${schedspot_frontend.strings.new_date}</label>
+                                <input type="date" id="new_date" name="new_date" required min="${new Date().toISOString().split('T')[0]}">
+                            </div>
+                            <div class="schedspot-form-group">
+                                <label for="new_time">${schedspot_frontend.strings.new_time}</label>
+                                <input type="time" id="new_time" name="new_time" required>
+                            </div>
+                            <div class="schedspot-form-group">
+                                <label for="reschedule_reason">${schedspot_frontend.strings.reason_optional}</label>
+                                <textarea id="reschedule_reason" name="reschedule_reason" rows="3"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="schedspot-modal-footer">
+                        <button type="button" class="schedspot-btn schedspot-btn-secondary schedspot-modal-close">
+                            ${schedspot_frontend.strings.cancel}
+                        </button>
+                        <button type="button" class="schedspot-btn schedspot-btn-primary" onclick="submitReschedule(${bookingId})">
+                            ${schedspot_frontend.strings.reschedule}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        return modalHtml;
+    }
+
+    /**
+     * Submit reschedule request
+     */
+    window.submitReschedule = function(bookingId) {
+        const form = document.getElementById('reschedule-form');
+        const formData = new FormData(form);
         
-        // Update notifications count
-        if (data.notifications_count) {
-            $('.notifications-count').text(data.notifications_count);
-        }
-        
-        // Update recent activity
-        if (data.recent_activity) {
-            updateRecentActivity(data.recent_activity);
+        const data = {
+            action: 'schedspot_reschedule_booking',
+            booking_id: bookingId,
+            new_date: formData.get('new_date'),
+            new_time: formData.get('new_time'),
+            reason: formData.get('reschedule_reason'),
+            nonce: schedspot_frontend.nonce
+        };
+
+        $.post(schedspot_frontend.ajax_url, data, function(response) {
+            if (response.success) {
+                showNotification(schedspot_frontend.strings.reschedule_success, 'success');
+                closeModal($('.schedspot-modal-close'));
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            } else {
+                showNotification(response.data.message || schedspot_frontend.strings.error, 'error');
+            }
+        });
+    };
+
+    /**
+     * Close modal
+     */
+    function closeModal($element) {
+        var modal = $element.closest('.schedspot-modal');
+        if (modal.length) {
+            modal.remove();
         }
     }
 
@@ -414,41 +356,111 @@
      * Show notification
      */
     function showNotification(message, type) {
-        const notification = $(`
-            <div class="schedspot-notification ${type}">
-                ${message}
-            </div>
-        `);
-        
-        $('body').append(notification);
-        
-        setTimeout(function() {
-            notification.fadeOut(function() {
-                $(this).remove();
-            });
+        // Remove existing notifications
+        const existingNotifications = document.querySelectorAll('.schedspot-notification');
+        existingNotifications.forEach(notification => notification.remove());
+
+        // Create new notification
+        const notification = document.createElement('div');
+        notification.className = `schedspot-notification ${type}`;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
         }, 5000);
     }
 
     /**
-     * Close modal
+     * Refresh dashboard data
      */
-    function closeModal() {
-        $('.modal').removeClass('active');
-        $('body').removeClass('modal-open');
+    function refreshDashboardData() {
+        // Refresh booking counts and recent bookings
+        $.post(schedspot_frontend.ajax_url, {
+            action: 'schedspot_refresh_dashboard',
+            nonce: schedspot_frontend.nonce
+        }, function(response) {
+            if (response.success && response.data) {
+                // Update dashboard widgets
+                if (response.data.booking_counts) {
+                    updateBookingCounts(response.data.booking_counts);
+                }
+                if (response.data.recent_bookings) {
+                    updateRecentBookings(response.data.recent_bookings);
+                }
+            }
+        });
     }
 
-    // Initialize when document is ready
-    $(document).ready(function() {
-        if ($('#schedspot-dashboard').length) {
-            initDashboard();
-        }
-    });
+    /**
+     * Update booking counts
+     */
+    function updateBookingCounts(counts) {
+        Object.keys(counts).forEach(function(key) {
+            const element = document.querySelector(`[data-count="${key}"]`);
+            if (element) {
+                element.textContent = counts[key];
+            }
+        });
+    }
 
-    // Cleanup on page unload
-    $(window).on('beforeunload', function() {
-        if (refreshInterval) {
-            clearInterval(refreshInterval);
+    /**
+     * Update recent bookings
+     */
+    function updateRecentBookings(bookings) {
+        const container = document.querySelector('.recent-bookings-list');
+        if (container && bookings) {
+            container.innerHTML = bookings;
         }
-    });
+    }
+
+    /**
+     * Initialize tooltips
+     */
+    function initTooltips() {
+        $('[data-tooltip]').each(function() {
+            $(this).attr('title', $(this).data('tooltip'));
+        });
+    }
+
+    /**
+     * Initialize status filters
+     */
+    function initStatusFilters() {
+        $('.status-filter').on('click', function() {
+            const status = $(this).data('status');
+            filterBookingsByStatus(status);
+        });
+    }
+
+    /**
+     * Filter bookings by status
+     */
+    function filterBookingsByStatus(status) {
+        $('.booking-item').each(function() {
+            const bookingStatus = $(this).data('status');
+            if (status === 'all' || bookingStatus === status) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+
+        // Update active filter
+        $('.status-filter').removeClass('active');
+        $(`.status-filter[data-status="${status}"]`).addClass('active');
+    }
+
+    // Export functions for global access
+    window.SchedSpotDashboard = {
+        showNotification: showNotification,
+        updateBookingStatus: updateBookingStatus,
+        refreshDashboardData: refreshDashboardData,
+        closeModal: closeModal
+    };
 
 })(jQuery);

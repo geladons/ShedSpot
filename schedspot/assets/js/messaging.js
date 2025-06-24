@@ -1,6 +1,6 @@
 /**
  * SchedSpot Messaging System JavaScript
- * 
+ *
  * @package SchedSpot
  * @version 1.0.0
  */
@@ -8,367 +8,377 @@
 (function($) {
     'use strict';
 
-    // Global messaging object
-    window.SchedSpotMessaging = {
-        currentConversation: null,
-        conversations: [],
-        messages: [],
-        refreshInterval: null,
-        isLoading: false
-    };
+    let currentConversationId = null;
+    let messagePollingInterval = null;
+
+    // Initialize when document is ready
+    $(document).ready(function() {
+        initMessaging();
+        initConversationHandlers();
+        initMessageForm();
+        initFileUpload();
+        
+        // Auto-select conversation if user_id is specified in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUserId = urlParams.get('user_id');
+        if (targetUserId) {
+            setTimeout(function() {
+                selectConversation(parseInt(targetUserId));
+            }, 1000);
+        }
+    });
 
     /**
      * Initialize messaging system
      */
     function initMessaging() {
-        // Load conversations
+        // Load conversations list
         loadConversations();
-        
-        // Event handlers
-        $(document).on('click', '.conversation-item', handleConversationClick);
-        $(document).on('click', '.send-message-btn', handleSendMessage);
-        $(document).on('keypress', '.message-input', handleMessageInputKeypress);
-        $(document).on('click', '.attach-file-btn', handleFileAttach);
-        $(document).on('change', '.file-input', handleFileSelect);
-        
-        // Auto-refresh messages
-        SchedSpotMessaging.refreshInterval = setInterval(refreshCurrentConversation, 10000); // 10 seconds
-        
-        // Auto-resize message input
-        $('.message-input').on('input', autoResizeMessageInput);
+
+        // Start polling for new messages every 30 seconds
+        messagePollingInterval = setInterval(function() {
+            if (currentConversationId) {
+                loadMessages(currentConversationId, false);
+            }
+            updateConversationsList();
+        }, 30000);
+    }
+
+    /**
+     * Initialize conversation handlers
+     */
+    function initConversationHandlers() {
+        // Conversation item click
+        $(document).on('click', '.schedspot-conversation-item', function() {
+            const userId = $(this).data('user-id');
+            selectConversation(userId);
+        });
+
+        // Mark conversation as read when selected
+        $(document).on('click', '.schedspot-conversation-item', function() {
+            markConversationAsRead($(this));
+        });
+    }
+
+    /**
+     * Initialize message form
+     */
+    function initMessageForm() {
+        // Send message on form submit
+        $('#schedspot-message-form').on('submit', function(e) {
+            e.preventDefault();
+            sendMessage();
+        });
+
+        // Send message on Enter key (but not Shift+Enter)
+        $('#message-text').on('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Auto-resize textarea
+        $('#message-text').on('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+    }
+
+    /**
+     * Initialize file upload
+     */
+    function initFileUpload() {
+        $('#message-attachment').on('change', function() {
+            const file = this.files[0];
+            if (file) {
+                // Validate file size and type
+                if (validateFile(file)) {
+                    showFilePreview(file);
+                } else {
+                    this.value = '';
+                }
+            }
+        });
     }
 
     /**
      * Load conversations list
      */
     function loadConversations() {
-        if (SchedSpotMessaging.isLoading) return;
-        
-        SchedSpotMessaging.isLoading = true;
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'messages/conversations',
-            method: 'GET',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success && response.data) {
-                    SchedSpotMessaging.conversations = response.data;
-                    renderConversationsList(response.data);
-                } else {
-                    showEmptyConversations();
-                }
-            },
-            error: function() {
-                showError('Failed to load conversations');
-            },
-            complete: function() {
-                SchedSpotMessaging.isLoading = false;
+        $.get(schedspot_frontend.rest_url + 'messages', {
+            _wpnonce: schedspot_frontend.nonce
+        })
+        .done(function(data) {
+            renderConversations(data);
+        })
+        .fail(function() {
+            showNotification(schedspot_frontend.strings.error_loading_conversations, 'error');
+        });
+    }
+
+    /**
+     * Select conversation
+     */
+    function selectConversation(userId) {
+        currentConversationId = userId;
+
+        // Update UI
+        $('.schedspot-conversation-item').removeClass('active');
+        $(`.schedspot-conversation-item[data-user-id="${userId}"]`).addClass('active');
+
+        // Load messages
+        loadMessages(userId, true);
+
+        // Show chat area
+        $('.schedspot-chat-area').show();
+        $('.schedspot-no-conversation').hide();
+    }
+
+    /**
+     * Load messages for conversation
+     */
+    function loadMessages(userId, scrollToBottom = true) {
+        $.get(schedspot_frontend.rest_url + 'conversations/' + userId, {
+            _wpnonce: schedspot_frontend.nonce
+        })
+        .done(function(data) {
+            renderMessages(data.messages, data.user);
+            if (scrollToBottom) {
+                scrollMessagesToBottom();
             }
+        })
+        .fail(function() {
+            showNotification(schedspot_frontend.strings.error_loading_messages, 'error');
+        });
+    }
+
+    /**
+     * Send message
+     */
+    function sendMessage() {
+        const messageText = $('#message-text').val().trim();
+        const attachment = $('#message-attachment')[0].files[0];
+
+        if (!messageText && !attachment) {
+            return;
+        }
+
+        if (!currentConversationId) {
+            showNotification(schedspot_frontend.strings.select_conversation, 'error');
+            return;
+        }
+
+        // Disable send button
+        const $sendBtn = $('.send-button');
+        $sendBtn.prop('disabled', true);
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('recipient_id', currentConversationId);
+        formData.append('content', messageText);
+        if (attachment) {
+            formData.append('attachment', attachment);
+        }
+
+        // Send message
+        $.ajax({
+            url: schedspot_frontend.rest_url + 'messages',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-WP-Nonce': schedspot_frontend.nonce
+            }
+        })
+        .done(function(data) {
+            // Clear form
+            $('#message-text').val('');
+            $('#message-attachment').val('');
+            $('.file-preview').remove();
+
+            // Reload messages
+            loadMessages(currentConversationId, true);
+
+            // Update conversations list
+            updateConversationsList();
+        })
+        .fail(function(xhr) {
+            const response = xhr.responseJSON;
+            const message = response && response.message ? 
+                response.message : 
+                schedspot_frontend.strings.error_sending_message;
+            showNotification(message, 'error');
+        })
+        .always(function() {
+            // Re-enable send button
+            $sendBtn.prop('disabled', false);
         });
     }
 
     /**
      * Render conversations list
      */
-    function renderConversationsList(conversations) {
-        const $list = $('.conversations-list');
-        let html = '<div class="conversations-header">Messages</div>';
-        
-        if (conversations.length === 0) {
-            html += '<div class="no-conversations">No conversations yet</div>';
-        } else {
-            conversations.forEach(function(conversation) {
-                const isUnread = conversation.unread_count > 0;
-                const timeAgo = formatTimeAgo(conversation.last_message_time);
-                
-                html += `
-                    <div class="conversation-item" data-user-id="${conversation.user_id}">
-                        <div class="conversation-name">${conversation.user_name}</div>
-                        <div class="conversation-preview">${conversation.last_message || 'No messages yet'}</div>
-                        <div class="conversation-time">${timeAgo}</div>
-                        ${isUnread ? '<div class="unread-indicator"></div>' : ''}
-                    </div>
-                `;
-            });
+    function renderConversations(conversations) {
+        const $list = $('.schedspot-conversations-list');
+        $list.empty();
+
+        if (!conversations || conversations.length === 0) {
+            $list.append('<div class="no-conversations">' + schedspot_frontend.strings.no_conversations + '</div>');
+            return;
         }
-        
-        $list.html(html);
-    }
 
-    /**
-     * Handle conversation click
-     */
-    function handleConversationClick() {
-        const userId = $(this).data('user-id');
-        selectConversation(userId);
-    }
+        conversations.forEach(function(conversation) {
+            const unreadCount = conversation.unread_count > 0 ? 
+                `<span class="unread-count">${conversation.unread_count}</span>` : '';
 
-    /**
-     * Select a conversation
-     */
-    function selectConversation(userId) {
-        // Update UI
-        $('.conversation-item').removeClass('active');
-        $(`.conversation-item[data-user-id="${userId}"]`).addClass('active');
-        
-        // Load messages
-        loadConversationMessages(userId);
-        
-        // Mark as read
-        markConversationAsRead(userId);
-        
-        SchedSpotMessaging.currentConversation = userId;
-    }
-
-    /**
-     * Load conversation messages
-     */
-    function loadConversationMessages(userId) {
-        $('.chat-area').removeClass('no-conversation');
-        $('.messages-container').html('<div class="loading-messages">Loading messages...</div>');
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'messages/conversation/' + userId,
-            method: 'GET',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success && response.data) {
-                    SchedSpotMessaging.messages = response.data.messages;
-                    renderMessages(response.data.messages);
-                    updateChatHeader(response.data.user);
-                } else {
-                    showError('Failed to load messages');
-                }
-            },
-            error: function() {
-                showError('Failed to load messages');
-            }
+            const conversationHtml = `
+                <div class="schedspot-conversation-item" data-user-id="${conversation.user_id}">
+                    <div class="user-avatar">
+                        <img src="${conversation.avatar}" alt="${conversation.name}">
+                    </div>
+                    <div class="conversation-info">
+                        <div class="user-name">
+                            ${conversation.name}
+                            ${unreadCount}
+                        </div>
+                        <div class="last-message">${conversation.last_message || ''}</div>
+                        <div class="time-ago">${conversation.time_ago || ''}</div>
+                    </div>
+                </div>
+            `;
+            $list.append(conversationHtml);
         });
     }
 
     /**
      * Render messages
      */
-    function renderMessages(messages) {
-        const $container = $('.messages-container');
-        let html = '';
-        
-        if (messages.length === 0) {
-            html = '<div class="no-messages">No messages yet. Start the conversation!</div>';
-        } else {
-            messages.forEach(function(message) {
-                const isSent = message.is_sent;
-                const timeFormatted = formatMessageTime(message.created_at);
-                
-                html += `
-                    <div class="message ${isSent ? 'sent' : 'received'}">
-                        <img src="${message.sender_avatar}" alt="${message.sender_name}" class="message-avatar">
-                        <div class="message-content">
-                            <div class="message-text">${escapeHtml(message.content)}</div>
-                            ${message.attachment ? renderAttachment(message.attachment) : ''}
-                            <div class="message-time">${timeFormatted}</div>
-                            ${isSent ? `<div class="message-status">${message.status}</div>` : ''}
-                        </div>
+    function renderMessages(messages, user) {
+        const $messages = $('.schedspot-messages');
+        $messages.empty();
+
+        // Update chat header
+        $('.schedspot-chat-header h3').text(user.name);
+
+        if (!messages || messages.length === 0) {
+            $messages.append('<div class="no-messages">' + schedspot_frontend.strings.no_messages + '</div>');
+            return;
+        }
+
+        messages.forEach(function(message) {
+            const isOwn = message.sender_id == schedspot_frontend.current_user_id;
+            const messageClass = isOwn ? 'schedspot-message own' : 'schedspot-message';
+
+            let attachmentHtml = '';
+            if (message.attachment_url) {
+                attachmentHtml = `
+                    <div class="schedspot-attachment">
+                        <a href="${message.attachment_url}" target="_blank">
+                            📎 ${message.attachment_name || 'Attachment'}
+                        </a>
                     </div>
                 `;
-            });
-        }
-        
-        $container.html(html);
-        scrollToBottom();
-    }
-
-    /**
-     * Render message attachment
-     */
-    function renderAttachment(attachment) {
-        return `
-            <div class="message-attachment">
-                <span class="attachment-icon dashicons dashicons-paperclip"></span>
-                <div class="attachment-info">
-                    <div class="attachment-name">${attachment.name}</div>
-                    <div class="attachment-size">${formatFileSize(attachment.size)}</div>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Update chat header
-     */
-    function updateChatHeader(user) {
-        $('.chat-user-name').text(user.name);
-        $('.chat-user-avatar').attr('src', user.avatar);
-        $('.chat-user-status').text(user.is_online ? 'Online' : 'Offline');
-    }
-
-    /**
-     * Handle send message
-     */
-    function handleSendMessage() {
-        const message = $('.message-input').val().trim();
-        if (!message || !SchedSpotMessaging.currentConversation) return;
-        
-        sendMessage(message);
-    }
-
-    /**
-     * Handle message input keypress
-     */
-    function handleMessageInputKeypress(e) {
-        if (e.which === 13 && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
-        }
-    }
-
-    /**
-     * Send message
-     */
-    function sendMessage(content, attachment = null) {
-        const $input = $('.message-input');
-        const $sendBtn = $('.send-message-btn');
-        
-        // Disable input
-        $input.prop('disabled', true);
-        $sendBtn.prop('disabled', true);
-        
-        const formData = new FormData();
-        formData.append('recipient_id', SchedSpotMessaging.currentConversation);
-        formData.append('content', content);
-        if (attachment) {
-            formData.append('attachment', attachment);
-        }
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'messages/send',
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Clear input
-                    $input.val('').trigger('input');
-                    
-                    // Add message to UI immediately
-                    addMessageToUI(response.data);
-                    
-                    // Refresh conversation list
-                    loadConversations();
-                } else {
-                    showError(response.message || 'Failed to send message');
-                }
-            },
-            error: function() {
-                showError('Failed to send message');
-            },
-            complete: function() {
-                $input.prop('disabled', false);
-                $sendBtn.prop('disabled', false);
-                $input.focus();
             }
+
+            const messageHtml = `
+                <div class="${messageClass}">
+                    <div class="avatar">
+                        <img src="${message.sender_avatar}" alt="${message.sender_name}">
+                    </div>
+                    <div class="content">
+                        <div class="text">${message.content}</div>
+                        ${attachmentHtml}
+                        <div class="time">${message.time_ago}</div>
+                    </div>
+                </div>
+            `;
+            $messages.append(messageHtml);
         });
     }
 
     /**
-     * Add message to UI
+     * Update conversations list (refresh unread counts)
      */
-    function addMessageToUI(message) {
-        const timeFormatted = formatMessageTime(message.created_at);
-        const messageHtml = `
-            <div class="message sent">
-                <img src="${message.sender_avatar}" alt="${message.sender_name}" class="message-avatar">
-                <div class="message-content">
-                    <div class="message-text">${escapeHtml(message.content)}</div>
-                    <div class="message-time">${timeFormatted}</div>
-                    <div class="message-status">Sent</div>
-                </div>
-            </div>
-        `;
-        
-        $('.messages-container').append(messageHtml);
-        scrollToBottom();
-    }
-
-    /**
-     * Auto-resize message input
-     */
-    function autoResizeMessageInput() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-    }
-
-    /**
-     * Refresh current conversation
-     */
-    function refreshCurrentConversation() {
-        if (SchedSpotMessaging.currentConversation) {
-            loadConversationMessages(SchedSpotMessaging.currentConversation);
-        }
+    function updateConversationsList() {
+        $.get(schedspot_frontend.rest_url + 'messages', {
+            _wpnonce: schedspot_frontend.nonce
+        })
+        .done(function(data) {
+            // Update unread counts without full re-render
+            data.forEach(function(conversation) {
+                const $item = $(`.schedspot-conversation-item[data-user-id="${conversation.user_id}"]`);
+                const $unreadCount = $item.find('.unread-count');
+                
+                if (conversation.unread_count > 0) {
+                    if ($unreadCount.length) {
+                        $unreadCount.text(conversation.unread_count);
+                    } else {
+                        $item.find('.user-name').append(`<span class="unread-count">${conversation.unread_count}</span>`);
+                    }
+                } else {
+                    $unreadCount.remove();
+                }
+            });
+        });
     }
 
     /**
      * Mark conversation as read
      */
-    function markConversationAsRead(userId) {
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'messages/mark-read/' + userId,
-            method: 'POST',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Remove unread indicator
-                    $(`.conversation-item[data-user-id="${userId}"] .unread-indicator`).remove();
-                }
-            }
+    function markConversationAsRead($conversationItem) {
+        $conversationItem.find('.unread-count').remove();
+    }
+
+    /**
+     * Scroll messages to bottom
+     */
+    function scrollMessagesToBottom() {
+        const $messages = $('.schedspot-messages');
+        $messages.scrollTop($messages[0].scrollHeight);
+    }
+
+    /**
+     * Validate file upload
+     */
+    function validateFile(file) {
+        const maxSize = schedspot_frontend.max_file_size * 1024 * 1024; // Convert MB to bytes
+        const allowedTypes = schedspot_frontend.allowed_file_types.split(',');
+
+        if (file.size > maxSize) {
+            showNotification(schedspot_frontend.strings.file_too_large, 'error');
+            return false;
+        }
+
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        if (!allowedTypes.includes(fileExtension)) {
+            showNotification(schedspot_frontend.strings.file_type_not_allowed, 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Show file preview
+     */
+    function showFilePreview(file) {
+        $('.file-preview').remove();
+        
+        const preview = $(`
+            <div class="file-preview">
+                📎 ${file.name} (${formatFileSize(file.size)})
+                <button type="button" class="remove-file">&times;</button>
+            </div>
+        `);
+        
+        $('#message-attachment').after(preview);
+        
+        preview.find('.remove-file').on('click', function() {
+            $('#message-attachment').val('');
+            preview.remove();
         });
-    }
-
-    /**
-     * Scroll to bottom of messages
-     */
-    function scrollToBottom() {
-        const $container = $('.messages-container');
-        $container.scrollTop($container[0].scrollHeight);
-    }
-
-    /**
-     * Format time ago
-     */
-    function formatTimeAgo(timestamp) {
-        const now = new Date();
-        const time = new Date(timestamp);
-        const diff = now - time;
-        const minutes = Math.floor(diff / 60000);
-        
-        if (minutes < 1) return 'Just now';
-        if (minutes < 60) return minutes + 'm ago';
-        
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return hours + 'h ago';
-        
-        const days = Math.floor(hours / 24);
-        if (days < 7) return days + 'd ago';
-        
-        return time.toLocaleDateString();
-    }
-
-    /**
-     * Format message time
-     */
-    function formatMessageTime(timestamp) {
-        const time = new Date(timestamp);
-        return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
     /**
@@ -383,51 +393,32 @@
     }
 
     /**
-     * Escape HTML
+     * Show notification
      */
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    function showNotification(message, type) {
+        const notification = $(`<div class="schedspot-notification ${type}">${message}</div>`);
+        $('body').append(notification);
+
+        setTimeout(function() {
+            notification.fadeOut(function() {
+                $(this).remove();
+            });
+        }, 5000);
     }
-
-    /**
-     * Show error message
-     */
-    function showError(message) {
-        $('.messages-container').html(`<div class="error-message">${message}</div>`);
-    }
-
-    /**
-     * Show empty conversations
-     */
-    function showEmptyConversations() {
-        $('.conversations-list').html(`
-            <div class="conversations-header">Messages</div>
-            <div class="no-conversations">
-                <div class="dashicons dashicons-email-alt"></div>
-                <p>No conversations yet</p>
-            </div>
-        `);
-    }
-
-    // Public methods
-    SchedSpotMessaging.selectConversation = selectConversation;
-    SchedSpotMessaging.sendMessage = sendMessage;
-    SchedSpotMessaging.refresh = loadConversations;
-
-    // Initialize when document is ready
-    $(document).ready(function() {
-        if ($('.schedspot-messaging').length) {
-            initMessaging();
-        }
-    });
 
     // Cleanup on page unload
     $(window).on('beforeunload', function() {
-        if (SchedSpotMessaging.refreshInterval) {
-            clearInterval(SchedSpotMessaging.refreshInterval);
+        if (messagePollingInterval) {
+            clearInterval(messagePollingInterval);
         }
     });
+
+    // Export functions for global access
+    window.SchedSpotMessaging = {
+        selectConversation: selectConversation,
+        sendMessage: sendMessage,
+        loadMessages: loadMessages,
+        showNotification: showNotification
+    };
 
 })(jQuery);

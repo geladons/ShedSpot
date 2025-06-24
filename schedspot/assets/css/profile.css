@@ -1,442 +1,472 @@
 /**
  * SchedSpot Profile Management Styles
- * 
+ *
  * @package SchedSpot
  * @version 1.0.0
  */
 
+/* Profile Container */
 .schedspot-profile-content {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.profile-header {
+.schedspot-profile-header {
     text-align: center;
     margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #f0f0f0;
 }
 
-.profile-header h2 {
-    color: #333;
+.schedspot-profile-header h2 {
     margin-bottom: 10px;
-    font-size: 1.8em;
+    color: #333;
 }
 
-.profile-header p {
-    color: #666;
-    font-size: 1.1em;
-    margin: 0;
+/* Profile Tabs */
+.schedspot-profile-tabs {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
 }
 
-/* Tab Navigation */
-.profile-tabs {
+.schedspot-tab-nav {
     display: flex;
-    border-bottom: 2px solid #f0f0f0;
-    margin-bottom: 30px;
-    overflow-x: auto;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
 }
 
 .tab-button {
+    flex: 1;
+    padding: 15px 20px;
     background: none;
     border: none;
-    padding: 15px 20px;
     cursor: pointer;
-    font-size: 0.95em;
+    font-size: 14px;
     font-weight: 500;
-    color: #666;
-    border-bottom: 3px solid transparent;
+    color: #495057;
     transition: all 0.3s ease;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    position: relative;
 }
 
 .tab-button:hover {
-    color: #007cba;
-    background: #f8f9fa;
+    background: #e9ecef;
+    color: #0073aa;
 }
 
 .tab-button.active {
-    color: #007cba;
-    border-bottom-color: #007cba;
-    background: #f0f8ff;
+    background: white;
+    color: #0073aa;
+    border-bottom: 2px solid #0073aa;
 }
 
-.tab-button .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
+.tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #0073aa;
 }
 
 /* Tab Content */
 .tab-content {
+    padding: 30px;
     display: none;
 }
 
 .tab-content.active {
     display: block;
-    animation: fadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Form Styling */
-.profile-form {
-    max-width: 600px;
-}
-
-.form-section {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border-left: 4px solid #007cba;
-}
-
-.form-section h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #333;
-    font-size: 1.2em;
-}
-
-.form-row {
+/* Form Styles */
+.schedspot-form-group {
     margin-bottom: 20px;
 }
 
-.form-row label {
+.schedspot-form-group label {
     display: block;
     margin-bottom: 5px;
     font-weight: 500;
     color: #333;
 }
 
-.form-row input,
-.form-row select,
-.form-row textarea {
+.schedspot-form-group input,
+.schedspot-form-group select,
+.schedspot-form-group textarea {
     width: 100%;
-    padding: 10px 12px;
+    padding: 10px 15px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 0.95em;
+    font-size: 14px;
     transition: border-color 0.3s ease;
 }
 
-.form-row input:focus,
-.form-row select:focus,
-.form-row textarea:focus {
+.schedspot-form-group input:focus,
+.schedspot-form-group select:focus,
+.schedspot-form-group textarea:focus {
     outline: none;
-    border-color: #007cba;
-    box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.2);
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
 }
 
-.form-row textarea {
+.schedspot-form-group textarea {
     resize: vertical;
-    min-height: 80px;
+    min-height: 100px;
 }
 
-.form-row .description {
-    font-size: 0.85em;
+.schedspot-form-group .description {
+    font-size: 12px;
     color: #666;
     margin-top: 5px;
-    line-height: 1.4;
 }
 
-/* Checkbox and Radio Styling */
-.checkbox-group,
-.radio-group {
+/* Form Grid */
+.schedspot-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.schedspot-form-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+/* Avatar Upload */
+.schedspot-avatar-upload {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.schedspot-avatar-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    overflow: hidden;
+    border: 4px solid #e9ecef;
+    position: relative;
+}
+
+.schedspot-avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.schedspot-avatar-preview .placeholder {
+    width: 100%;
+    height: 100%;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 48px;
+}
+
+.schedspot-avatar-upload input[type="file"] {
+    display: none;
+}
+
+.schedspot-avatar-upload label {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #0073aa;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.schedspot-avatar-upload label:hover {
+    background: #005a87;
+}
+
+/* Skills and Specialties */
+.schedspot-skills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.schedspot-skill-tag {
+    background: #e9ecef;
+    color: #495057;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    position: relative;
+}
+
+.schedspot-skill-tag .remove {
+    margin-left: 8px;
+    cursor: pointer;
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.schedspot-skill-input {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.schedspot-skill-input input {
+    flex: 1;
+}
+
+.schedspot-skill-input button {
+    padding: 8px 16px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.schedspot-skill-input button:hover {
+    background: #218838;
+}
+
+/* Availability Schedule */
+.schedspot-availability-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.schedspot-day-column {
+    text-align: center;
+}
+
+.schedspot-day-header {
+    font-weight: bold;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-size: 12px;
+}
+
+.schedspot-time-slot {
+    padding: 8px;
+    margin-bottom: 5px;
+    background: #e9ecef;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.schedspot-time-slot.available {
+    background: #d4edda;
+    color: #155724;
+}
+
+.schedspot-time-slot:hover {
+    background: #0073aa;
+    color: white;
+}
+
+/* Notification Preferences */
+.schedspot-notification-group {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.schedspot-notification-group h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.schedspot-checkbox-group {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.checkbox-item,
-.radio-item {
+.schedspot-checkbox-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 }
 
-.checkbox-item input[type="checkbox"],
-.radio-item input[type="radio"] {
+.schedspot-checkbox-item input[type="checkbox"] {
     width: auto;
     margin: 0;
 }
 
-.checkbox-item label,
-.radio-item label {
+.schedspot-checkbox-item label {
     margin: 0;
     font-weight: normal;
     cursor: pointer;
 }
 
-/* Skills Management */
-.skills-container {
+/* Privacy Settings */
+.schedspot-privacy-setting {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.skill-tag {
-    background: #e9ecef;
-    color: #495057;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 0.85em;
-    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 5px;
+    padding: 15px 0;
+    border-bottom: 1px solid #e9ecef;
 }
 
-.skill-tag.selected {
-    background: #007cba;
-    color: white;
+.schedspot-privacy-setting:last-child {
+    border-bottom: none;
 }
 
-.skill-tag .remove-skill {
-    background: none;
-    border: none;
-    color: inherit;
+.schedspot-privacy-info h5 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.schedspot-privacy-info p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+}
+
+.schedspot-toggle {
+    position: relative;
+    width: 50px;
+    height: 24px;
+}
+
+.schedspot-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.schedspot-toggle-slider {
+    position: absolute;
     cursor: pointer;
-    padding: 0;
-    font-size: 0.8em;
-    opacity: 0.7;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 24px;
 }
 
-.skill-tag .remove-skill:hover {
-    opacity: 1;
-}
-
-.add-skill-input {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.add-skill-input input {
-    flex: 1;
-}
-
-.add-skill-btn {
-    background: #28a745;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85em;
-    transition: background-color 0.3s ease;
-}
-
-.add-skill-btn:hover {
-    background: #218838;
-}
-
-/* Avatar Upload */
-.avatar-upload-section {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.current-avatar {
-    width: 100px;
-    height: 100px;
+.schedspot-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.4s;
     border-radius: 50%;
-    object-fit: cover;
-    margin-bottom: 15px;
-    border: 4px solid #e0e0e0;
 }
 
-.avatar-upload-btn {
-    background: #007cba;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.3s ease;
+.schedspot-toggle input:checked + .schedspot-toggle-slider {
+    background-color: #0073aa;
 }
 
-.avatar-upload-btn:hover {
-    background: #005a87;
+.schedspot-toggle input:checked + .schedspot-toggle-slider:before {
+    transform: translateX(26px);
 }
 
 /* Action Buttons */
-.form-actions {
-    display: flex;
-    gap: 15px;
-    justify-content: flex-end;
+.schedspot-form-actions {
     margin-top: 30px;
     padding-top: 20px;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid #e9ecef;
+    text-align: right;
 }
 
-.btn {
-    padding: 12px 24px;
+.schedspot-btn {
+    padding: 10px 20px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.95em;
+    font-size: 14px;
     font-weight: 500;
-    transition: all 0.3s ease;
     text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    display: inline-block;
+    transition: all 0.3s ease;
+    margin-left: 10px;
 }
 
-.btn-primary {
-    background: #007cba;
+.schedspot-btn-primary {
+    background: #0073aa;
     color: white;
 }
 
-.btn-primary:hover {
+.schedspot-btn-primary:hover {
     background: #005a87;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 124, 186, 0.3);
 }
 
-.btn-secondary {
+.schedspot-btn-secondary {
     background: #6c757d;
     color: white;
 }
 
-.btn-secondary:hover {
-    background: #5a6268;
+.schedspot-btn-secondary:hover {
+    background: #545b62;
 }
 
-.btn-danger {
+.schedspot-btn-danger {
     background: #dc3545;
     color: white;
 }
 
-.btn-danger:hover {
+.schedspot-btn-danger:hover {
     background: #c82333;
-}
-
-.btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none !important;
-    box-shadow: none !important;
-}
-
-/* Success/Error Messages */
-.profile-message {
-    padding: 12px 16px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-    font-weight: 500;
-}
-
-.profile-message.success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.profile-message.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-
-/* Data Export/Delete Section */
-.danger-zone {
-    background: #fff5f5;
-    border: 1px solid #fed7d7;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 30px;
-}
-
-.danger-zone h3 {
-    color: #c53030;
-    margin-top: 0;
-    margin-bottom: 15px;
-}
-
-.danger-zone p {
-    color: #744210;
-    margin-bottom: 15px;
-    line-height: 1.5;
-}
-
-.danger-actions {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
     .schedspot-profile-content {
         padding: 15px;
-        margin: 10px;
     }
-    
-    .profile-tabs {
-        flex-wrap: wrap;
-    }
-    
-    .tab-button {
-        padding: 12px 15px;
-        font-size: 0.9em;
-    }
-    
-    .form-section {
-        padding: 15px;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-    }
-    
-    .btn {
-        justify-content: center;
-    }
-    
-    .danger-actions {
-        flex-direction: column;
-    }
-}
 
-@media (max-width: 480px) {
-    .schedspot-profile-content {
-        padding: 12px;
-        margin: 5px;
+    .schedspot-form-grid {
+        grid-template-columns: 1fr;
     }
-    
-    .profile-header h2 {
-        font-size: 1.5em;
-    }
-    
-    .tab-button {
-        padding: 10px 12px;
-        font-size: 0.85em;
-    }
-    
-    .form-section {
-        padding: 12px;
-    }
-    
-    .current-avatar {
-        width: 80px;
-        height: 80px;
-    }
-    
-    .add-skill-input {
+
+    .schedspot-tab-nav {
         flex-direction: column;
+    }
+
+    .tab-content {
+        padding: 20px;
+    }
+
+    .schedspot-availability-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .schedspot-day-column {
+        text-align: left;
+    }
+
+    .schedspot-privacy-setting {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .schedspot-form-actions {
+        text-align: center;
+    }
+
+    .schedspot-btn {
+        margin: 5px;
+        display: block;
+        width: 100%;
     }
 }

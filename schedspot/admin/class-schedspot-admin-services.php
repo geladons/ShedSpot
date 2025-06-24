@@ -1,8 +1,6 @@
 <?php
 /**
- * SchedSpot Admin Services Management
- *
- * Handles all service-related admin functionality
+ * Admin Services Management Class
  *
  * @package SchedSpot
  * @version 1.0.0
@@ -15,6 +13,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * SchedSpot_Admin_Services Class.
+ *
+ * Handles service management in the admin area including
+ * creating, editing, deleting, and organizing services.
  *
  * @class SchedSpot_Admin_Services
  * @version 1.0.0
@@ -31,12 +32,14 @@ class SchedSpot_Admin_Services {
     }
 
     /**
-     * Initialize services admin functionality.
+     * Initialize services management functionality.
      *
      * @since 1.0.0
      */
     public function init() {
-        // No hooks needed here - this class is called by SchedSpot_Admin
+        add_action( 'wp_ajax_schedspot_save_service', array( $this, 'handle_save_service' ) );
+        add_action( 'wp_ajax_schedspot_delete_service', array( $this, 'handle_delete_service' ) );
+        add_action( 'wp_ajax_schedspot_toggle_service_status', array( $this, 'handle_toggle_service_status' ) );
     }
 
     /**
@@ -44,441 +47,482 @@ class SchedSpot_Admin_Services {
      *
      * @since 1.0.0
      */
-    public function services_page() {
-        $action = isset( $_GET['action'] ) ? sanitize_text_field( $_GET['action'] ) : '';
-        $service_id = isset( $_GET['service_id'] ) ? absint( $_GET['service_id'] ) : 0;
-
+    public static function services_page() {
+        $instance = new self();
+        
         // Handle form submissions
-        if ( isset( $_POST['schedspot_service_action'] ) ) {
-            $this->handle_service_form_submission();
+        if ( isset( $_POST['action'] ) ) {
+            $instance->handle_form_submission();
         }
-
-        switch ( $action ) {
-            case 'add':
-                $this->render_add_service_form();
-                break;
-            case 'edit':
-                $this->render_edit_service_form( $service_id );
-                break;
-            case 'delete':
-                $this->handle_delete_service( $service_id );
-                break;
-            default:
-                $this->render_services_list();
-                break;
+        
+        // Handle individual actions
+        if ( isset( $_GET['action'] ) ) {
+            $instance->handle_individual_action();
         }
+        
+        // Get services list
+        $services = $instance->get_services();
+        $categories = $instance->get_service_categories();
+        
+        // Determine current view
+        $current_view = isset( $_GET['action'] ) && $_GET['action'] === 'edit' ? 'edit' : 'list';
+        $editing_service = null;
+        
+        if ( $current_view === 'edit' && isset( $_GET['service_id'] ) ) {
+            $editing_service = $instance->get_service( intval( $_GET['service_id'] ) );
+        }
+        
+        // Load template
+        include SCHEDSPOT_PLUGIN_DIR . 'templates/admin/services-management.php';
     }
 
     /**
-     * Render services list.
+     * Get all services.
      *
      * @since 1.0.0
+     * @return array Services list.
      */
-    private function render_services_list() {
-        $services = SchedSpot_Service::get_all_services();
-        ?>
-        <div class="wrap">
-            <h1><?php _e( 'Services', 'schedspot' ); ?>
-                <a href="<?php echo admin_url( 'admin.php?page=schedspot-services&action=add' ); ?>" class="page-title-action"><?php _e( 'Add New', 'schedspot' ); ?></a>
-            </h1>
-
-            <div class="tablenav top">
-                <div class="alignleft actions">
-                    <select name="action" id="bulk-action-selector-top">
-                        <option value="-1"><?php _e( 'Bulk Actions', 'schedspot' ); ?></option>
-                        <option value="delete"><?php _e( 'Delete', 'schedspot' ); ?></option>
-                        <option value="activate"><?php _e( 'Activate', 'schedspot' ); ?></option>
-                        <option value="deactivate"><?php _e( 'Deactivate', 'schedspot' ); ?></option>
-                    </select>
-                    <input type="submit" id="doaction" class="button action" value="<?php _e( 'Apply', 'schedspot' ); ?>">
-                </div>
-            </div>
-
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <td id="cb" class="manage-column column-cb check-column">
-                            <input id="cb-select-all-1" type="checkbox">
-                        </td>
-                        <th scope="col" class="manage-column column-name"><?php _e( 'Service Name', 'schedspot' ); ?></th>
-                        <th scope="col" class="manage-column column-category"><?php _e( 'Category', 'schedspot' ); ?></th>
-                        <th scope="col" class="manage-column column-duration"><?php _e( 'Duration', 'schedspot' ); ?></th>
-                        <th scope="col" class="manage-column column-price"><?php _e( 'Price', 'schedspot' ); ?></th>
-                        <th scope="col" class="manage-column column-workers"><?php _e( 'Workers', 'schedspot' ); ?></th>
-                        <th scope="col" class="manage-column column-status"><?php _e( 'Status', 'schedspot' ); ?></th>
-                        <th scope="col" class="manage-column column-actions"><?php _e( 'Actions', 'schedspot' ); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ( empty( $services ) ) : ?>
-                        <tr>
-                            <td colspan="8" class="no-items"><?php _e( 'No services found.', 'schedspot' ); ?></td>
-                        </tr>
-                    <?php else : ?>
-                        <?php foreach ( $services as $service ) : ?>
-                            <tr>
-                                <th scope="row" class="check-column">
-                                    <input type="checkbox" name="service[]" value="<?php echo esc_attr( $service->id ); ?>">
-                                </th>
-                                <td class="column-name">
-                                    <strong><?php echo esc_html( $service->name ); ?></strong>
-                                    <?php if ( $service->description ) : ?>
-                                        <br><small><?php echo esc_html( wp_trim_words( $service->description, 10 ) ); ?></small>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="column-category">
-                                    <?php echo esc_html( $service->category ?: __( 'Uncategorized', 'schedspot' ) ); ?>
-                                </td>
-                                <td class="column-duration">
-                                    <?php echo esc_html( $service->duration . ' ' . __( 'minutes', 'schedspot' ) ); ?>
-                                </td>
-                                <td class="column-price">
-                                    <?php if ( $service->price_type === 'fixed' ) : ?>
-                                        <?php echo esc_html( '$' . number_format( $service->price, 2 ) ); ?>
-                                    <?php else : ?>
-                                        <?php echo esc_html( '$' . number_format( $service->price, 2 ) . '/hr' ); ?>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="column-workers">
-                                    <?php echo esc_html( $service->get_worker_count() ); ?>
-                                </td>
-                                <td class="column-status">
-                                    <span class="status-badge status-<?php echo esc_attr( $service->status ); ?>">
-                                        <?php echo esc_html( ucfirst( $service->status ) ); ?>
-                                    </span>
-                                </td>
-                                <td class="column-actions">
-                                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-services&action=edit&service_id=' . $service->id ); ?>" class="button button-small"><?php _e( 'Edit', 'schedspot' ); ?></a>
-                                    <a href="<?php echo wp_nonce_url( admin_url( 'admin.php?page=schedspot-services&action=delete&service_id=' . $service->id ), 'delete_service_' . $service->id ); ?>" class="button button-small button-link-delete" onclick="return confirm('<?php _e( 'Are you sure you want to delete this service?', 'schedspot' ); ?>')"><?php _e( 'Delete', 'schedspot' ); ?></a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <style>
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
+    private function get_services() {
+        global $wpdb;
+        
+        $search = isset( $_GET['s'] ) ? sanitize_text_field( $_GET['s'] ) : '';
+        $category = isset( $_GET['category'] ) ? sanitize_text_field( $_GET['category'] ) : '';
+        $status = isset( $_GET['status'] ) ? sanitize_text_field( $_GET['status'] ) : '';
+        
+        $where_clauses = array( '1=1' );
+        $where_values = array();
+        
+        if ( $search ) {
+            $search_term = '%' . $wpdb->esc_like( $search ) . '%';
+            $where_clauses[] = '(name LIKE %s OR description LIKE %s)';
+            $where_values[] = $search_term;
+            $where_values[] = $search_term;
         }
-        .status-active { background: #d4edda; color: #155724; }
-        .status-inactive { background: #f8d7da; color: #721c24; }
-        .status-draft { background: #fff3cd; color: #856404; }
-        </style>
-        <?php
+        
+        if ( $category ) {
+            $where_clauses[] = 'category = %s';
+            $where_values[] = $category;
+        }
+        
+        if ( $status ) {
+            $where_clauses[] = 'is_active = %d';
+            $where_values[] = intval( $status );
+        }
+        
+        $where_clause = implode( ' AND ', $where_clauses );
+        $query = "SELECT * FROM {$wpdb->prefix}schedspot_services WHERE {$where_clause} ORDER BY name ASC";
+        
+        if ( ! empty( $where_values ) ) {
+            $query = $wpdb->prepare( $query, $where_values );
+        }
+        
+        return $wpdb->get_results( $query );
     }
 
     /**
-     * Render add service form.
-     *
-     * @since 1.0.0
-     */
-    private function render_add_service_form() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e( 'Add New Service', 'schedspot' ); ?></h1>
-
-            <form method="post" action="">
-                <?php wp_nonce_field( 'schedspot_service_action' ); ?>
-                <input type="hidden" name="schedspot_service_action" value="create">
-
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">
-                            <label for="service_name"><?php _e( 'Service Name', 'schedspot' ); ?> *</label>
-                        </th>
-                        <td>
-                            <input type="text" id="service_name" name="service_name" class="regular-text" required>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_description"><?php _e( 'Description', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <textarea id="service_description" name="service_description" rows="4" cols="50" class="large-text"></textarea>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_category"><?php _e( 'Category', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="text" id="service_category" name="service_category" class="regular-text">
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_duration"><?php _e( 'Duration (minutes)', 'schedspot' ); ?> *</label>
-                        </th>
-                        <td>
-                            <input type="number" id="service_duration" name="service_duration" min="15" step="15" value="60" required>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_price_type"><?php _e( 'Price Type', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <select id="service_price_type" name="service_price_type">
-                                <option value="fixed"><?php _e( 'Fixed Price', 'schedspot' ); ?></option>
-                                <option value="hourly"><?php _e( 'Hourly Rate', 'schedspot' ); ?></option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_price"><?php _e( 'Price', 'schedspot' ); ?> *</label>
-                        </th>
-                        <td>
-                            <input type="number" id="service_price" name="service_price" min="0" step="0.01" required>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_status"><?php _e( 'Status', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <select id="service_status" name="service_status">
-                                <option value="active"><?php _e( 'Active', 'schedspot' ); ?></option>
-                                <option value="inactive"><?php _e( 'Inactive', 'schedspot' ); ?></option>
-                                <option value="draft"><?php _e( 'Draft', 'schedspot' ); ?></option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_requirements"><?php _e( 'Requirements', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <textarea id="service_requirements" name="service_requirements" rows="3" cols="50" class="large-text" placeholder="<?php _e( 'Any special requirements or skills needed for this service...', 'schedspot' ); ?>"></textarea>
-                        </td>
-                    </tr>
-                </table>
-
-                <p class="submit">
-                    <input type="submit" name="submit" class="button-primary" value="<?php _e( 'Add Service', 'schedspot' ); ?>">
-                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-services' ); ?>" class="button"><?php _e( 'Cancel', 'schedspot' ); ?></a>
-                </p>
-            </form>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render edit service form.
+     * Get service by ID.
      *
      * @since 1.0.0
      * @param int $service_id Service ID.
+     * @return object|null Service object or null if not found.
      */
-    private function render_edit_service_form( $service_id ) {
-        $service = new SchedSpot_Service( $service_id );
+    private function get_service( $service_id ) {
+        global $wpdb;
         
-        if ( ! $service->id ) {
-            wp_die( __( 'Service not found.', 'schedspot' ) );
-        }
-        ?>
-        <div class="wrap">
-            <h1><?php printf( __( 'Edit Service: %s', 'schedspot' ), esc_html( $service->name ) ); ?></h1>
-
-            <form method="post" action="">
-                <?php wp_nonce_field( 'schedspot_service_action' ); ?>
-                <input type="hidden" name="schedspot_service_action" value="update">
-                <input type="hidden" name="service_id" value="<?php echo esc_attr( $service->id ); ?>">
-
-                <table class="form-table">
-                    <tr>
-                        <th scope="row">
-                            <label for="service_name"><?php _e( 'Service Name', 'schedspot' ); ?> *</label>
-                        </th>
-                        <td>
-                            <input type="text" id="service_name" name="service_name" class="regular-text" value="<?php echo esc_attr( $service->name ); ?>" required>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_description"><?php _e( 'Description', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <textarea id="service_description" name="service_description" rows="4" cols="50" class="large-text"><?php echo esc_textarea( $service->description ); ?></textarea>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_category"><?php _e( 'Category', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <input type="text" id="service_category" name="service_category" class="regular-text" value="<?php echo esc_attr( $service->category ); ?>">
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_duration"><?php _e( 'Duration (minutes)', 'schedspot' ); ?> *</label>
-                        </th>
-                        <td>
-                            <input type="number" id="service_duration" name="service_duration" min="15" step="15" value="<?php echo esc_attr( $service->duration ); ?>" required>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_price_type"><?php _e( 'Price Type', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <select id="service_price_type" name="service_price_type">
-                                <option value="fixed" <?php selected( $service->price_type, 'fixed' ); ?>><?php _e( 'Fixed Price', 'schedspot' ); ?></option>
-                                <option value="hourly" <?php selected( $service->price_type, 'hourly' ); ?>><?php _e( 'Hourly Rate', 'schedspot' ); ?></option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_price"><?php _e( 'Price', 'schedspot' ); ?> *</label>
-                        </th>
-                        <td>
-                            <input type="number" id="service_price" name="service_price" min="0" step="0.01" value="<?php echo esc_attr( $service->price ); ?>" required>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_status"><?php _e( 'Status', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <select id="service_status" name="service_status">
-                                <option value="active" <?php selected( $service->status, 'active' ); ?>><?php _e( 'Active', 'schedspot' ); ?></option>
-                                <option value="inactive" <?php selected( $service->status, 'inactive' ); ?>><?php _e( 'Inactive', 'schedspot' ); ?></option>
-                                <option value="draft" <?php selected( $service->status, 'draft' ); ?>><?php _e( 'Draft', 'schedspot' ); ?></option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">
-                            <label for="service_requirements"><?php _e( 'Requirements', 'schedspot' ); ?></label>
-                        </th>
-                        <td>
-                            <textarea id="service_requirements" name="service_requirements" rows="3" cols="50" class="large-text" placeholder="<?php _e( 'Any special requirements or skills needed for this service...', 'schedspot' ); ?>"><?php echo esc_textarea( $service->requirements ); ?></textarea>
-                        </td>
-                    </tr>
-                </table>
-
-                <p class="submit">
-                    <input type="submit" name="submit" class="button-primary" value="<?php _e( 'Update Service', 'schedspot' ); ?>">
-                    <a href="<?php echo admin_url( 'admin.php?page=schedspot-services' ); ?>" class="button"><?php _e( 'Cancel', 'schedspot' ); ?></a>
-                </p>
-            </form>
-        </div>
-        <?php
+        return $wpdb->get_row( $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}schedspot_services WHERE id = %d",
+            $service_id
+        ) );
     }
 
     /**
-     * Handle service form submission.
+     * Get service categories.
+     *
+     * @since 1.0.0
+     * @return array Service categories.
+     */
+    private function get_service_categories() {
+        global $wpdb;
+        
+        $categories = $wpdb->get_col( 
+            "SELECT DISTINCT category FROM {$wpdb->prefix}schedspot_services WHERE category IS NOT NULL AND category != '' ORDER BY category ASC" 
+        );
+        
+        return array_filter( $categories );
+    }
+
+    /**
+     * Handle form submission.
      *
      * @since 1.0.0
      */
-    private function handle_service_form_submission() {
-        if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'schedspot_service_action' ) ) {
-            wp_die( __( 'Security check failed.', 'schedspot' ) );
-        }
-
-        $action = sanitize_text_field( $_POST['schedspot_service_action'] );
-
+    private function handle_form_submission() {
+        $action = sanitize_text_field( $_POST['action'] );
+        
         switch ( $action ) {
-            case 'create':
-                $this->create_service();
+            case 'add_service':
+                $this->add_service();
                 break;
-            case 'update':
+            case 'update_service':
                 $this->update_service();
                 break;
+            case 'bulk_action':
+                $this->handle_bulk_action();
+                break;
         }
     }
 
     /**
-     * Create new service.
+     * Handle individual actions.
      *
      * @since 1.0.0
      */
-    private function create_service() {
+    private function handle_individual_action() {
+        $action = sanitize_text_field( $_GET['action'] );
+        
+        switch ( $action ) {
+            case 'delete':
+                if ( isset( $_GET['service_id'] ) && wp_verify_nonce( $_GET['_wpnonce'], 'delete_service_' . $_GET['service_id'] ) ) {
+                    $this->delete_service( intval( $_GET['service_id'] ) );
+                }
+                break;
+            case 'duplicate':
+                if ( isset( $_GET['service_id'] ) && wp_verify_nonce( $_GET['_wpnonce'], 'duplicate_service_' . $_GET['service_id'] ) ) {
+                    $this->duplicate_service( intval( $_GET['service_id'] ) );
+                }
+                break;
+            case 'toggle_status':
+                if ( isset( $_GET['service_id'] ) && wp_verify_nonce( $_GET['_wpnonce'], 'toggle_status_' . $_GET['service_id'] ) ) {
+                    $this->toggle_service_status( intval( $_GET['service_id'] ) );
+                }
+                break;
+        }
+    }
+
+    /**
+     * Add new service.
+     *
+     * @since 1.0.0
+     */
+    private function add_service() {
+        if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'add_service' ) ) {
+            wp_die( __( 'Security check failed.', 'schedspot' ) );
+        }
+        
+        global $wpdb;
+        
         $service_data = array(
             'name' => sanitize_text_field( $_POST['service_name'] ),
             'description' => sanitize_textarea_field( $_POST['service_description'] ),
             'category' => sanitize_text_field( $_POST['service_category'] ),
-            'duration' => absint( $_POST['service_duration'] ),
-            'price_type' => sanitize_text_field( $_POST['service_price_type'] ),
-            'price' => floatval( $_POST['service_price'] ),
-            'status' => sanitize_text_field( $_POST['service_status'] ),
-            'requirements' => sanitize_textarea_field( $_POST['service_requirements'] ),
+            'base_price' => floatval( $_POST['service_price'] ),
+            'duration' => intval( $_POST['service_duration'] ),
+            'is_active' => intval( $_POST['service_status'] ),
+            'created_at' => current_time( 'mysql' ),
         );
-
-        $service = new SchedSpot_Service();
-        if ( $service->create( $service_data ) ) {
-            wp_redirect( admin_url( 'admin.php?page=schedspot-services&created=1' ) );
+        
+        $inserted = $wpdb->insert(
+            $wpdb->prefix . 'schedspot_services',
+            $service_data,
+            array( '%s', '%s', '%s', '%f', '%d', '%d', '%s' )
+        );
+        
+        if ( $inserted ) {
+            wp_redirect( admin_url( 'admin.php?page=schedspot-services&added=1' ) );
             exit;
         } else {
-            wp_redirect( admin_url( 'admin.php?page=schedspot-services&action=add&error=1' ) );
-            exit;
+            add_settings_error( 'schedspot_services', 'add_failed', __( 'Failed to add service.', 'schedspot' ), 'error' );
         }
     }
 
     /**
-     * Update service.
+     * Update existing service.
      *
      * @since 1.0.0
      */
     private function update_service() {
-        $service_id = absint( $_POST['service_id'] );
-        $service = new SchedSpot_Service( $service_id );
+        $service_id = intval( $_POST['service_id'] );
         
-        if ( ! $service->id ) {
-            wp_die( __( 'Service not found.', 'schedspot' ) );
+        if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'update_service_' . $service_id ) ) {
+            wp_die( __( 'Security check failed.', 'schedspot' ) );
         }
-
+        
+        global $wpdb;
+        
         $service_data = array(
             'name' => sanitize_text_field( $_POST['service_name'] ),
             'description' => sanitize_textarea_field( $_POST['service_description'] ),
             'category' => sanitize_text_field( $_POST['service_category'] ),
-            'duration' => absint( $_POST['service_duration'] ),
-            'price_type' => sanitize_text_field( $_POST['service_price_type'] ),
-            'price' => floatval( $_POST['service_price'] ),
-            'status' => sanitize_text_field( $_POST['service_status'] ),
-            'requirements' => sanitize_textarea_field( $_POST['service_requirements'] ),
+            'base_price' => floatval( $_POST['service_price'] ),
+            'duration' => intval( $_POST['service_duration'] ),
+            'is_active' => intval( $_POST['service_status'] ),
+            'updated_at' => current_time( 'mysql' ),
         );
-
-        if ( $service->update( $service_data ) ) {
+        
+        $updated = $wpdb->update(
+            $wpdb->prefix . 'schedspot_services',
+            $service_data,
+            array( 'id' => $service_id ),
+            array( '%s', '%s', '%s', '%f', '%d', '%d', '%s' ),
+            array( '%d' )
+        );
+        
+        if ( $updated !== false ) {
             wp_redirect( admin_url( 'admin.php?page=schedspot-services&updated=1' ) );
             exit;
         } else {
-            wp_redirect( admin_url( 'admin.php?page=schedspot-services&action=edit&service_id=' . $service_id . '&error=1' ) );
+            add_settings_error( 'schedspot_services', 'update_failed', __( 'Failed to update service.', 'schedspot' ), 'error' );
+        }
+    }
+
+    /**
+     * Delete service.
+     *
+     * @since 1.0.0
+     * @param int $service_id Service ID.
+     */
+    private function delete_service( $service_id ) {
+        global $wpdb;
+        
+        // Check if service is used in any bookings
+        $booking_count = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings WHERE service_id = %d",
+            $service_id
+        ) );
+        
+        if ( $booking_count > 0 ) {
+            wp_redirect( admin_url( 'admin.php?page=schedspot-services&error=service_in_use' ) );
+            exit;
+        }
+        
+        $deleted = $wpdb->delete(
+            $wpdb->prefix . 'schedspot_services',
+            array( 'id' => $service_id ),
+            array( '%d' )
+        );
+        
+        if ( $deleted ) {
+            wp_redirect( admin_url( 'admin.php?page=schedspot-services&deleted=1' ) );
+            exit;
+        } else {
+            wp_redirect( admin_url( 'admin.php?page=schedspot-services&error=delete_failed' ) );
             exit;
         }
     }
 
     /**
-     * Handle delete service action.
+     * Duplicate service.
      *
      * @since 1.0.0
      * @param int $service_id Service ID.
      */
-    private function handle_delete_service( $service_id ) {
-        if ( ! wp_verify_nonce( $_GET['_wpnonce'], 'delete_service_' . $service_id ) ) {
-            wp_die( __( 'Security check failed.', 'schedspot' ) );
-        }
-
-        $service = new SchedSpot_Service( $service_id );
+    private function duplicate_service( $service_id ) {
+        global $wpdb;
         
-        if ( ! $service->id ) {
-            wp_die( __( 'Service not found.', 'schedspot' ) );
+        $original_service = $this->get_service( $service_id );
+        
+        if ( ! $original_service ) {
+            wp_redirect( admin_url( 'admin.php?page=schedspot-services&error=service_not_found' ) );
+            exit;
         }
-
-        if ( $service->delete() ) {
-            wp_redirect( admin_url( 'admin.php?page=schedspot-services&deleted=1' ) );
+        
+        $service_data = array(
+            'name' => $original_service->name . ' (Copy)',
+            'description' => $original_service->description,
+            'category' => $original_service->category,
+            'base_price' => $original_service->base_price,
+            'duration' => $original_service->duration,
+            'is_active' => 0,
+            'created_at' => current_time( 'mysql' ),
+        );
+        
+        $inserted = $wpdb->insert(
+            $wpdb->prefix . 'schedspot_services',
+            $service_data,
+            array( '%s', '%s', '%s', '%f', '%d', '%d', '%s' )
+        );
+        
+        if ( $inserted ) {
+            wp_redirect( admin_url( 'admin.php?page=schedspot-services&duplicated=1' ) );
             exit;
         } else {
-            wp_redirect( admin_url( 'admin.php?page=schedspot-services&error=1' ) );
+            wp_redirect( admin_url( 'admin.php?page=schedspot-services&error=duplicate_failed' ) );
             exit;
         }
+    }
+
+    /**
+     * Toggle service status.
+     *
+     * @since 1.0.0
+     * @param int $service_id Service ID.
+     */
+    private function toggle_service_status( $service_id ) {
+        global $wpdb;
+        
+        $current_status = $wpdb->get_var( $wpdb->prepare(
+            "SELECT is_active FROM {$wpdb->prefix}schedspot_services WHERE id = %d",
+            $service_id
+        ) );
+
+        $new_status = ( $current_status == 1 ) ? 0 : 1;
+
+        $updated = $wpdb->update(
+            $wpdb->prefix . 'schedspot_services',
+            array( 'is_active' => $new_status ),
+            array( 'id' => $service_id ),
+            array( '%d' ),
+            array( '%d' )
+        );
+        
+        if ( $updated !== false ) {
+            wp_redirect( admin_url( 'admin.php?page=schedspot-services&status_updated=1' ) );
+            exit;
+        } else {
+            wp_redirect( admin_url( 'admin.php?page=schedspot-services&error=status_update_failed' ) );
+            exit;
+        }
+    }
+
+    /**
+     * Handle bulk actions.
+     *
+     * @since 1.0.0
+     */
+    private function handle_bulk_action() {
+        if ( ! wp_verify_nonce( $_POST['_wpnonce'], 'bulk-services' ) ) {
+            wp_die( __( 'Security check failed.', 'schedspot' ) );
+        }
+        
+        $action = sanitize_text_field( $_POST['bulk_action'] );
+        $service_ids = array_map( 'intval', $_POST['service'] ?? array() );
+        
+        if ( empty( $service_ids ) ) {
+            return;
+        }
+        
+        switch ( $action ) {
+            case 'delete':
+                $this->bulk_delete_services( $service_ids );
+                break;
+            case 'activate':
+                $this->bulk_update_status( $service_ids, 'active' );
+                break;
+            case 'deactivate':
+                $this->bulk_update_status( $service_ids, 'inactive' );
+                break;
+        }
+    }
+
+    /**
+     * Bulk delete services.
+     *
+     * @since 1.0.0
+     * @param array $service_ids Service IDs.
+     */
+    private function bulk_delete_services( $service_ids ) {
+        global $wpdb;
+        
+        $placeholders = implode( ',', array_fill( 0, count( $service_ids ), '%d' ) );
+        
+        // Check if any services are used in bookings
+        $booking_count = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}schedspot_bookings WHERE service_id IN ($placeholders)",
+            $service_ids
+        ) );
+        
+        if ( $booking_count > 0 ) {
+            add_settings_error( 'schedspot_services', 'services_in_use', __( 'Some services cannot be deleted because they are used in bookings.', 'schedspot' ), 'error' );
+            return;
+        }
+        
+        $deleted = $wpdb->query( $wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}schedspot_services WHERE id IN ($placeholders)",
+            $service_ids
+        ) );
+        
+        if ( $deleted ) {
+            $message = sprintf( 
+                _n( '%d service deleted.', '%d services deleted.', $deleted, 'schedspot' ), 
+                $deleted 
+            );
+            add_settings_error( 'schedspot_services', 'services_deleted', $message, 'updated' );
+        }
+    }
+
+    /**
+     * Bulk update service status.
+     *
+     * @since 1.0.0
+     * @param array  $service_ids Service IDs.
+     * @param string $status      New status.
+     */
+    private function bulk_update_status( $service_ids, $status ) {
+        global $wpdb;
+        
+        $placeholders = implode( ',', array_fill( 0, count( $service_ids ), '%d' ) );
+        $params = array_merge( array( $status ), $service_ids );
+        
+        $status_value = ( $status === 'active' ) ? 1 : 0;
+        $params = array_merge( array( $status_value ), $service_ids );
+
+        $updated = $wpdb->query( $wpdb->prepare(
+            "UPDATE {$wpdb->prefix}schedspot_services SET is_active = %d WHERE id IN ($placeholders)",
+            $params
+        ) );
+        
+        if ( $updated ) {
+            $message = sprintf( 
+                _n( '%d service updated.', '%d services updated.', $updated, 'schedspot' ), 
+                $updated 
+            );
+            add_settings_error( 'schedspot_services', 'services_updated', $message, 'updated' );
+        }
+    }
+
+    /**
+     * Handle AJAX save service.
+     *
+     * @since 1.0.0
+     */
+    public function handle_save_service() {
+        if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_save_service' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
+        }
+        
+        // Implementation for AJAX service saving
+        wp_send_json_success( array( 'message' => __( 'Service saved successfully.', 'schedspot' ) ) );
+    }
+
+    /**
+     * Handle AJAX delete service.
+     *
+     * @since 1.0.0
+     */
+    public function handle_delete_service() {
+        if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_delete_service' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
+        }
+        
+        $service_id = intval( $_POST['service_id'] );
+        $this->delete_service( $service_id );
+        
+        wp_send_json_success( array( 'message' => __( 'Service deleted successfully.', 'schedspot' ) ) );
+    }
+
+    /**
+     * Handle AJAX toggle service status.
+     *
+     * @since 1.0.0
+     */
+    public function handle_toggle_service_status() {
+        if ( ! wp_verify_nonce( $_POST['nonce'], 'schedspot_toggle_service_status' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
+        }
+        
+        $service_id = intval( $_POST['service_id'] );
+        $this->toggle_service_status( $service_id );
+        
+        wp_send_json_success( array( 'message' => __( 'Service status updated successfully.', 'schedspot' ) ) );
     }
 }

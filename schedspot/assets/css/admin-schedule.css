@@ -1,0 +1,512 @@
+/**
+ * SchedSpot Admin Schedule Management Styles
+ *
+ * @package SchedSpot
+ * @version 1.7.0
+ */
+
+.schedspot-admin-schedule {
+    max-width: 1200px;
+}
+
+.schedspot-schedule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.schedspot-worker-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.schedspot-worker-selector label {
+    font-weight: 600;
+    margin: 0;
+}
+
+.schedspot-worker-selector select {
+    min-width: 200px;
+}
+
+.schedspot-schedule-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.schedspot-no-worker {
+    text-align: center;
+    padding: 40px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.schedspot-schedule-tabs {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-top: 20px;
+}
+
+.schedspot-schedule-tabs .nav-tab-wrapper {
+    border-bottom: 1px solid #ddd;
+    margin: 0;
+}
+
+.schedspot-schedule-tabs .tab-content {
+    display: none;
+    padding: 20px;
+}
+
+.schedspot-schedule-tabs .tab-content.active {
+    display: block;
+}
+
+/* WordPress Admin Tab Styles */
+.schedspot-schedule-tabs .nav-tab-wrapper {
+    border-bottom: 1px solid #ccd0d4;
+    margin: 0;
+    padding: 0;
+}
+
+.schedspot-schedule-tabs .nav-tab {
+    background: #f1f1f1;
+    border: 1px solid #ccd0d4;
+    border-bottom: none;
+    color: #555;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    margin: 0 5px -1px 0;
+    padding: 10px 15px;
+    position: relative;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.schedspot-schedule-tabs .nav-tab:hover {
+    background: #fafafa;
+    color: #333;
+}
+
+.schedspot-schedule-tabs .nav-tab.nav-tab-active {
+    background: #fff;
+    border-bottom: 1px solid #fff;
+    color: #333;
+    margin-bottom: -1px;
+    padding-bottom: 11px;
+}
+
+.schedspot-schedule-tabs .nav-tab:focus {
+    box-shadow: 0 0 0 1px #5b9dd9, 0 0 2px 1px rgba(30, 140, 190, 0.8);
+    outline: none;
+}
+
+/* Weekly Schedule Styles */
+.schedspot-weekly-schedule {
+    max-width: 800px;
+}
+
+.schedule-instructions {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f0f8ff;
+    border-left: 4px solid #0073aa;
+    border-radius: 3px;
+}
+
+.day-schedule {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #f7f7f7;
+    border-bottom: 1px solid #ddd;
+}
+
+.day-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.day-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-weight: 600;
+}
+
+.day-toggle input[type="checkbox"] {
+    margin: 0;
+}
+
+.time-slots {
+    padding: 20px;
+}
+
+.time-slot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 3px;
+}
+
+.time-slot input[type="time"] {
+    width: 120px;
+}
+
+.time-separator {
+    font-weight: 600;
+    color: #666;
+}
+
+.remove-slot {
+    color: #d63638;
+    text-decoration: none;
+    font-size: 12px;
+}
+
+.remove-slot:hover {
+    color: #d63638;
+    text-decoration: underline;
+}
+
+.add-slot {
+    margin-top: 10px;
+}
+
+/* Exceptions Styles */
+.schedspot-exceptions {
+    max-width: 900px;
+}
+
+.exceptions-header {
+    margin-bottom: 30px;
+}
+
+.exceptions-header h3 {
+    margin-bottom: 5px;
+}
+
+.add-exception {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.add-exception h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.exception-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    align-items: end;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-row label {
+    font-weight: 600;
+    margin: 0;
+}
+
+.custom-hours {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.exceptions-list h4 {
+    margin-bottom: 15px;
+}
+
+.no-exceptions {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+.remove-exception {
+    color: #d63638;
+    text-decoration: none;
+}
+
+.remove-exception:hover {
+    color: #d63638;
+    text-decoration: underline;
+}
+
+/* Calendar View Styles */
+.schedspot-calendar-view {
+    max-width: 1000px;
+}
+
+.calendar-header {
+    margin-bottom: 20px;
+}
+
+.calendar-header h3 {
+    margin-bottom: 5px;
+}
+
+.calendar-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+#current-month {
+    font-size: 18px;
+    font-weight: 600;
+    min-width: 200px;
+    text-align: center;
+}
+
+#schedule-calendar {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.calendar-table th {
+    background: #f7f7f7;
+    padding: 12px 8px;
+    text-align: center;
+    font-weight: 600;
+    border-bottom: 1px solid #ddd;
+    color: #333;
+}
+
+.calendar-day {
+    width: 14.28%;
+    height: 80px;
+    padding: 8px;
+    border: 1px solid #e0e0e0;
+    vertical-align: top;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.calendar-day:hover {
+    background: #f8f9fa;
+}
+
+.calendar-day.empty {
+    background: #f9f9f9;
+    cursor: default;
+}
+
+.calendar-day.today {
+    background: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.calendar-day.past {
+    color: #999;
+    background: #fafafa;
+}
+
+.calendar-day.available {
+    background: #f0f8f0;
+    border-left: 3px solid #46b450;
+}
+
+.calendar-day.unavailable {
+    background: #fff5f5;
+    border-left: 3px solid #dc3232;
+}
+
+.day-number {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.day-status {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.2;
+}
+
+.calendar-legend {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.calendar-legend h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.legend-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+}
+
+.legend-color.available {
+    background: #46b450;
+}
+
+.legend-color.booked {
+    background: #0073aa;
+}
+
+.legend-color.unavailable {
+    background: #dc3232;
+}
+
+.legend-color.exception {
+    background: #ffb900;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .schedspot-schedule-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+
+    .schedspot-worker-selector {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .schedspot-worker-selector select {
+        min-width: auto;
+    }
+
+    .exception-form {
+        grid-template-columns: 1fr;
+    }
+
+    .custom-hours {
+        grid-template-columns: 1fr;
+    }
+
+    .time-slot {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 5px;
+    }
+
+    .time-slot input[type="time"] {
+        width: 100%;
+    }
+
+    .legend-items {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .calendar-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+/* Loading States */
+.schedspot-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.schedspot-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Success/Error Messages */
+.schedspot-notice {
+    padding: 10px 15px;
+    margin: 15px 0;
+    border-radius: 3px;
+    border-left: 4px solid;
+}
+
+.schedspot-notice.success {
+    background: #f0f8ff;
+    border-left-color: #46b450;
+    color: #155724;
+}
+
+.schedspot-notice.error {
+    background: #fef2f2;
+    border-left-color: #dc3232;
+    color: #721c24;
+}

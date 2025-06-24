@@ -3,7 +3,7 @@
  * Plugin Name: SchedSpot
  * Plugin URI: https://schedspot.com
  * Description: A comprehensive WordPress service booking and marketplace plugin combining appointment scheduling with a multi-vendor marketplace.
- * Version: 1.6.1
+ * Version: 1.7.6
  * Author: SchedSpot Team
  * Author URI: https://schedspot.com
  * License: GPL v2 or later
@@ -16,7 +16,7 @@
  * Network: false
  *
  * @package SchedSpot
- * @version 1.6.1
+ * @version 1.7.6
  */
 
 // Prevent direct access
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'SCHEDSPOT_VERSION', '1.6.1' );
+define( 'SCHEDSPOT_VERSION', '1.7.6' );
 define( 'SCHEDSPOT_PLUGIN_FILE', __FILE__ );
 define( 'SCHEDSPOT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SCHEDSPOT_PLUGIN_URL', plugins_url( '/', __FILE__ ) );
@@ -106,31 +106,101 @@ final class SchedSpot_Core {
      * @since 0.1.0
      */
     public function includes() {
+        // Debug logging removed to prevent log spam
+
         // Core includes
-        include_once SCHEDSPOT_INCLUDES_DIR . 'class-schedspot-install.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'class-schedspot-assets.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'models/class-schedspot-booking.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'models/class-schedspot-service.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'models/class-schedspot-worker.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'shortcodes/class-schedspot-shortcodes.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'api/class-schedspot-api.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-woocommerce.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-gcalendar.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-sms.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'integrations/class-schedspot-geolocation.php';
+        $core_files = array(
+            'class-schedspot-install.php',
+            'models/class-schedspot-booking.php',
+            'models/class-schedspot-service.php',
+            'models/class-schedspot-worker.php',
+            'api/class-schedspot-api.php',
+            'integrations/class-schedspot-woocommerce.php',
+            'integrations/class-schedspot-gcalendar.php',
+            'integrations/class-schedspot-sms.php',
+            'integrations/class-schedspot-geolocation.php',
+        );
+
+        foreach ( $core_files as $file ) {
+            $file_path = SCHEDSPOT_INCLUDES_DIR . $file;
+            if ( file_exists( $file_path ) ) {
+                include_once $file_path;
+            } elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'SchedSpot: Core file not found: ' . $file_path );
+            }
+        }
 
         // Messaging classes
-        include_once SCHEDSPOT_INCLUDES_DIR . 'messaging/class-schedspot-message.php';
-        include_once SCHEDSPOT_INCLUDES_DIR . 'messaging/class-schedspot-messaging.php';
+        $messaging_files = array(
+            'messaging/class-schedspot-message.php',
+            'messaging/class-schedspot-messaging.php',
+        );
 
-        // Admin includes
+        foreach ( $messaging_files as $file ) {
+            $file_path = SCHEDSPOT_INCLUDES_DIR . $file;
+            if ( file_exists( $file_path ) ) {
+                include_once $file_path;
+            } elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'SchedSpot: Messaging file not found: ' . $file_path );
+            }
+        }
+
+        // Shortcode classes (new modular structure)
+        $shortcode_files = array(
+            'shortcodes/class-schedspot-shortcodes-core.php',
+            'shortcodes/class-schedspot-shortcode-booking-form.php',
+            'shortcodes/class-schedspot-shortcode-dashboard.php',
+            'shortcodes/class-schedspot-shortcode-messages.php',
+            'shortcodes/class-schedspot-shortcode-profile.php',
+        );
+
+        foreach ( $shortcode_files as $file ) {
+            $file_path = SCHEDSPOT_INCLUDES_DIR . $file;
+            if ( file_exists( $file_path ) ) {
+                include_once $file_path;
+            } elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'SchedSpot: Shortcode file not found: ' . $file_path );
+            }
+        }
+
+        // Navigation system
+        $navigation_file = SCHEDSPOT_INCLUDES_DIR . 'class-schedspot-navigation.php';
+        if ( file_exists( $navigation_file ) ) {
+            include_once $navigation_file;
+        } elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'SchedSpot: Navigation file not found: ' . $navigation_file );
+        }
+
+        // Admin includes (new modular structure)
         if ( is_admin() ) {
-            include_once SCHEDSPOT_ADMIN_DIR . 'class-schedspot-admin.php';
+            $admin_files = array(
+                'class-schedspot-admin-core.php',
+                'class-schedspot-admin-bookings.php',
+                'class-schedspot-admin-services.php',
+                'class-schedspot-admin-workers.php',
+                'class-schedspot-admin-settings.php',
+                'class-schedspot-admin-analytics.php',
+                'class-schedspot-admin-schedule.php',
+            );
+
+            foreach ( $admin_files as $file ) {
+                $file_path = SCHEDSPOT_ADMIN_DIR . $file;
+                if ( file_exists( $file_path ) ) {
+                    include_once $file_path;
+                } elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                    error_log( 'SchedSpot: Admin file not found: ' . $file_path );
+                }
+            }
         }
 
         // Public includes
         if ( ! is_admin() || defined( 'DOING_AJAX' ) ) {
-            include_once SCHEDSPOT_PUBLIC_DIR . 'class-schedspot-public.php';
+            $public_file = SCHEDSPOT_PUBLIC_DIR . 'class-schedspot-public.php';
+            if ( file_exists( $public_file ) ) {
+                include_once $public_file;
+            } elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'SchedSpot: Public file not found: ' . $public_file );
+            }
         }
     }
 
@@ -173,37 +243,58 @@ final class SchedSpot_Core {
      * @since 0.1.0
      */
     private function init_components() {
-        // Initialize assets manager
-        new SchedSpot_Assets();
-
         // Initialize API
-        new SchedSpot_API();
+        if ( class_exists( 'SchedSpot_API' ) ) {
+            new SchedSpot_API();
+        }
 
         // Initialize WooCommerce integration
-        new SchedSpot_WooCommerce();
+        if ( class_exists( 'SchedSpot_WooCommerce' ) ) {
+            new SchedSpot_WooCommerce();
+        }
 
         // Initialize Google Calendar integration
-        new SchedSpot_GCal();
+        if ( class_exists( 'SchedSpot_GCal' ) ) {
+            new SchedSpot_GCal();
+        }
 
         // Initialize SMS integration
-        new SchedSpot_SMS();
+        if ( class_exists( 'SchedSpot_SMS' ) ) {
+            new SchedSpot_SMS();
+        }
 
         // Initialize geolocation integration
-        new SchedSpot_Geolocation();
+        if ( class_exists( 'SchedSpot_Geolocation' ) ) {
+            new SchedSpot_Geolocation();
+        }
 
         // Initialize messaging system
-        new SchedSpot_Messaging();
+        if ( class_exists( 'SchedSpot_Messaging' ) ) {
+            new SchedSpot_Messaging();
+        }
 
-        // Initialize shortcodes
-        new SchedSpot_Shortcodes();
+        // Initialize shortcodes (new modular structure)
+        if ( class_exists( 'SchedSpot_Shortcodes_Core' ) ) {
+            new SchedSpot_Shortcodes_Core();
+        }
 
-        // Initialize admin
-        if ( is_admin() ) {
-            new SchedSpot_Admin();
+        // Initialize navigation system
+        if ( class_exists( 'SchedSpot_Navigation' ) ) {
+            new SchedSpot_Navigation();
+        }
+
+        // Initialize admin (new modular structure)
+        if ( is_admin() && class_exists( 'SchedSpot_Admin_Core' ) ) {
+            new SchedSpot_Admin_Core();
+        }
+
+        // Initialize admin schedule management
+        if ( is_admin() && class_exists( 'SchedSpot_Admin_Schedule' ) ) {
+            new SchedSpot_Admin_Schedule();
         }
 
         // Initialize public
-        if ( ! is_admin() || defined( 'DOING_AJAX' ) ) {
+        if ( ( ! is_admin() || defined( 'DOING_AJAX' ) ) && class_exists( 'SchedSpot_Public' ) ) {
             new SchedSpot_Public();
         }
     }
@@ -379,6 +470,9 @@ final class SchedSpot_Core {
             case 'profile':
                 $this->render_virtual_page( __( 'Profile & Settings', 'schedspot' ), '[schedspot_profile]' );
                 break;
+            case 'workers':
+                $this->render_virtual_page( __( 'Find Workers', 'schedspot' ), '[schedspot_workers_grid]' );
+                break;
         }
     }
 
@@ -436,9 +530,75 @@ final class SchedSpot_Core {
         $wp_query->max_num_pages = 1;
         $wp_query->is_404 = false;
 
+        // Add filter to ensure shortcodes are processed in virtual page content
+        add_filter( 'the_content', 'do_shortcode', 11 );
+
+        // Add filter to process shortcodes in virtual page content specifically
+        add_filter( 'the_content', array( $this, 'process_virtual_page_shortcodes' ), 12 );
+
+        // Try to get page template, fallback to index.php if not found
+        $template = get_page_template();
+        if ( ! $template || ! file_exists( $template ) ) {
+            $template = get_template_directory() . '/index.php';
+            if ( ! file_exists( $template ) ) {
+                // Last resort: create a basic template
+                $this->render_basic_template( $title, $content );
+                exit;
+            }
+        }
+
         // Load the page template
-        include( get_page_template() );
+        include( $template );
         exit;
+    }
+
+    /**
+     * Process shortcodes in virtual page content.
+     *
+     * @since 1.0.0
+     * @param string $content Page content.
+     * @return string Processed content.
+     */
+    public function process_virtual_page_shortcodes( $content ) {
+        global $post;
+
+        // Only process if this is our virtual page
+        if ( isset( $post->ID ) && $post->ID === -1 && isset( $_GET['schedspot_action'] ) ) {
+            // Ensure shortcodes are processed
+            $content = do_shortcode( $content );
+
+            // Apply additional content filters that might be needed
+            $content = wpautop( $content );
+        }
+
+        return $content;
+    }
+
+    /**
+     * Render a basic template for virtual pages when no theme template is available.
+     *
+     * @since 1.0.0
+     * @param string $title Page title.
+     * @param string $content Page content (shortcode).
+     */
+    private function render_basic_template( $title, $content ) {
+        get_header();
+        ?>
+        <div id="primary" class="content-area">
+            <main id="main" class="site-main">
+                <article class="page">
+                    <header class="entry-header">
+                        <h1 class="entry-title"><?php echo esc_html( $title ); ?></h1>
+                    </header>
+                    <div class="entry-content">
+                        <?php echo do_shortcode( $content ); ?>
+                    </div>
+                </article>
+            </main>
+        </div>
+        <?php
+        get_sidebar();
+        get_footer();
     }
 }
 

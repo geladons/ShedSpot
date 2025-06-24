@@ -1,6 +1,6 @@
 /**
  * SchedSpot Profile Management JavaScript
- * 
+ *
  * @package SchedSpot
  * @version 1.0.0
  */
@@ -8,192 +8,207 @@
 (function($) {
     'use strict';
 
-    /**
-     * Initialize profile functionality
-     */
-    function initProfile() {
-        // Tab switching functionality
-        $('.tab-button').on('click', handleTabSwitch);
-        
-        // Form submissions
-        $('.profile-form').on('submit', handleFormSubmission);
-        
-        // Skills management
-        $('.add-skill-btn').on('click', handleAddSkill);
-        $(document).on('click', '.remove-skill', handleRemoveSkill);
-        $('.add-skill-input input').on('keypress', handleSkillInputKeypress);
-        
-        // Avatar upload
-        $('.avatar-upload-btn').on('click', handleAvatarUpload);
-        $('#avatar-file-input').on('change', handleAvatarFileSelect);
-        
-        // Data export/delete
-        $('.export-data-btn').on('click', handleDataExport);
-        $('.delete-account-btn').on('click', handleAccountDeletion);
-        
-        // Form validation
-        $('.profile-form input, .profile-form select, .profile-form textarea').on('blur', validateField);
-        
-        // Auto-save for certain fields
-        $('.auto-save').on('change', handleAutoSave);
-        
-        // Initialize skill tags
-        initializeSkillTags();
-    }
+    // Initialize when document is ready
+    $(document).ready(function() {
+        initProfileTabs();
+        initAvatarUpload();
+        initSkillsManagement();
+        initAvailabilityScheduler();
+        initFormValidation();
+        initNotificationSettings();
+    });
 
     /**
-     * Handle tab switching
+     * Initialize profile tabs
      */
-    function handleTabSwitch() {
-        const tabId = $(this).data('tab');
-        
-        // Update active tab
-        $('.tab-button').removeClass('active');
-        $(this).addClass('active');
-        
-        // Show target content
-        $('.tab-content').removeClass('active');
-        $(`#${tabId}`).addClass('active');
-        
-        // Load tab-specific data if needed
-        loadTabData(tabId);
-    }
+    function initProfileTabs() {
+        $('.tab-button').on('click', function() {
+            const tabId = $(this).data('tab');
+            
+            // Update active tab button
+            $('.tab-button').removeClass('active');
+            $(this).addClass('active');
+            
+            // Show corresponding tab content
+            $('.tab-content').removeClass('active');
+            $('#' + tabId).addClass('active');
+            
+            // Update URL hash
+            window.location.hash = tabId;
+        });
 
-    /**
-     * Load tab-specific data
-     */
-    function loadTabData(tabId) {
-        switch (tabId) {
-            case 'worker-profile':
-                loadWorkerProfileData();
-                break;
-            case 'notifications':
-                loadNotificationSettings();
-                break;
-            case 'privacy':
-                loadPrivacySettings();
-                break;
+        // Activate tab from URL hash on page load
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            const $tabButton = $(`.tab-button[data-tab="${hash}"]`);
+            if ($tabButton.length) {
+                $tabButton.click();
+            }
         }
     }
 
     /**
-     * Handle form submission
+     * Initialize avatar upload
      */
-    function handleFormSubmission(e) {
-        e.preventDefault();
-        
-        const $form = $(this);
-        const $submitBtn = $form.find('[type="submit"]');
-        const formData = new FormData(this);
-        
-        // Validate form
-        if (!validateForm($form)) {
-            return false;
-        }
-        
-        // Show loading state
-        $submitBtn.prop('disabled', true);
-        const originalText = $submitBtn.html();
-        $submitBtn.html('<span class="dashicons dashicons-update spin"></span> Saving...');
-        
-        // Determine endpoint based on form
-        let endpoint = 'users/profile';
-        if ($form.hasClass('worker-profile-form')) {
-            endpoint = 'workers/profile';
-        } else if ($form.hasClass('notification-settings-form')) {
-            endpoint = 'users/notifications';
-        } else if ($form.hasClass('privacy-settings-form')) {
-            endpoint = 'users/privacy';
-        }
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + endpoint,
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    showMessage('Profile updated successfully!', 'success');
-                    
-                    // Update UI with new data if provided
-                    if (response.data) {
-                        updateProfileUI(response.data);
-                    }
+    function initAvatarUpload() {
+        $('#avatar-upload').on('change', function() {
+            const file = this.files[0];
+            if (file) {
+                if (validateImageFile(file)) {
+                    previewAvatar(file);
                 } else {
-                    showMessage(response.message || 'Failed to update profile', 'error');
+                    this.value = '';
                 }
-            },
-            error: function(xhr) {
-                let message = 'Error updating profile';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    message = xhr.responseJSON.message;
-                }
-                showMessage(message, 'error');
-            },
-            complete: function() {
-                $submitBtn.prop('disabled', false);
-                $submitBtn.html(originalText);
             }
         });
     }
 
     /**
-     * Handle add skill
+     * Initialize skills management
      */
-    function handleAddSkill() {
-        const $input = $('.add-skill-input input');
-        const skill = $input.val().trim();
-        
-        if (skill && !isSkillAlreadyAdded(skill)) {
-            addSkillTag(skill);
-            $input.val('');
+    function initSkillsManagement() {
+        // Add skill
+        $('#add-skill-btn').on('click', function() {
+            const skillInput = $('#new-skill');
+            const skill = skillInput.val().trim();
+            
+            if (skill && !isSkillExists(skill)) {
+                addSkillTag(skill);
+                skillInput.val('');
+            }
+        });
+
+        // Add skill on Enter key
+        $('#new-skill').on('keypress', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                $('#add-skill-btn').click();
+            }
+        });
+
+        // Remove skill
+        $(document).on('click', '.schedspot-skill-tag .remove', function() {
+            $(this).closest('.schedspot-skill-tag').remove();
+            updateSkillsInput();
+        });
+    }
+
+    /**
+     * Initialize availability scheduler
+     */
+    function initAvailabilityScheduler() {
+        // Toggle time slot availability
+        $(document).on('click', '.schedspot-time-slot', function() {
+            $(this).toggleClass('available');
+            updateAvailabilityData();
+        });
+
+        // Bulk select for days
+        $('.schedspot-day-header').on('click', function() {
+            const dayColumn = $(this).closest('.schedspot-day-column');
+            const timeSlots = dayColumn.find('.schedspot-time-slot');
+            const allAvailable = timeSlots.length === timeSlots.filter('.available').length;
+            
+            if (allAvailable) {
+                timeSlots.removeClass('available');
+            } else {
+                timeSlots.addClass('available');
+            }
+            
+            updateAvailabilityData();
+        });
+    }
+
+    /**
+     * Initialize form validation
+     */
+    function initFormValidation() {
+        // Profile form submission
+        $('#schedspot-profile-form').on('submit', function(e) {
+            if (!validateProfileForm()) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Show loading state
+            const $submitBtn = $(this).find('[type="submit"]');
+            $submitBtn.prop('disabled', true);
+            $submitBtn.text(schedspot_frontend.strings.saving);
+        });
+
+        // Real-time validation
+        $('#profile-email').on('blur', function() {
+            const email = $(this).val();
+            if (email && !isValidEmail(email)) {
+                showFieldError($(this), schedspot_frontend.strings.invalid_email);
+            } else {
+                clearFieldError($(this));
+            }
+        });
+
+        $('#profile-phone').on('blur', function() {
+            const phone = $(this).val();
+            if (phone && phone.length < 10) {
+                showFieldError($(this), schedspot_frontend.strings.invalid_phone);
+            } else {
+                clearFieldError($(this));
+            }
+        });
+    }
+
+    /**
+     * Initialize notification settings
+     */
+    function initNotificationSettings() {
+        // Toggle switches
+        $('.schedspot-toggle input').on('change', function() {
+            const setting = $(this).attr('name');
+            const value = $(this).is(':checked');
+            
+            // Save setting immediately
+            saveNotificationSetting(setting, value);
+        });
+    }
+
+    /**
+     * Validate image file
+     */
+    function validateImageFile(file) {
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+
+        if (file.size > maxSize) {
+            showNotification(schedspot_frontend.strings.image_too_large, 'error');
+            return false;
         }
-    }
 
-    /**
-     * Handle skill input keypress
-     */
-    function handleSkillInputKeypress(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            handleAddSkill();
+        if (!allowedTypes.includes(file.type)) {
+            showNotification(schedspot_frontend.strings.invalid_image_type, 'error');
+            return false;
         }
+
+        return true;
     }
 
     /**
-     * Handle remove skill
+     * Preview avatar
      */
-    function handleRemoveSkill() {
-        $(this).closest('.skill-tag').remove();
-        updateSkillsInput();
+    function previewAvatar(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            $('.schedspot-avatar-preview img').attr('src', e.target.result);
+            $('.schedspot-avatar-preview .placeholder').hide();
+        };
+        reader.readAsDataURL(file);
     }
 
     /**
-     * Add skill tag
+     * Check if skill already exists
      */
-    function addSkillTag(skill) {
-        const skillHtml = `
-            <div class="skill-tag selected">
-                ${escapeHtml(skill)}
-                <button type="button" class="remove-skill">&times;</button>
-            </div>
-        `;
-        
-        $('.skills-container').append(skillHtml);
-        updateSkillsInput();
-    }
-
-    /**
-     * Check if skill is already added
-     */
-    function isSkillAlreadyAdded(skill) {
+    function isSkillExists(skill) {
         let exists = false;
-        $('.skill-tag').each(function() {
-            if ($(this).text().trim().replace('×', '') === skill) {
+        $('.schedspot-skill-tag').each(function() {
+            if ($(this).text().trim().replace('×', '').trim().toLowerCase() === skill.toLowerCase()) {
                 exists = true;
                 return false;
             }
@@ -202,325 +217,135 @@
     }
 
     /**
+     * Add skill tag
+     */
+    function addSkillTag(skill) {
+        const skillTag = $(`
+            <div class="schedspot-skill-tag">
+                ${skill}
+                <span class="remove">&times;</span>
+            </div>
+        `);
+        
+        $('.schedspot-skills-list').append(skillTag);
+        updateSkillsInput();
+    }
+
+    /**
      * Update skills hidden input
      */
     function updateSkillsInput() {
         const skills = [];
-        $('.skill-tag.selected').each(function() {
-            const skill = $(this).text().trim().replace('×', '');
+        $('.schedspot-skill-tag').each(function() {
+            const skill = $(this).text().trim().replace('×', '').trim();
             if (skill) {
                 skills.push(skill);
             }
         });
         
-        $('input[name="skills"]').val(skills.join(','));
+        $('#skills-input').val(skills.join(','));
     }
 
     /**
-     * Initialize skill tags
+     * Update availability data
      */
-    function initializeSkillTags() {
-        // Make existing skill tags selectable
-        $('.skill-tag').on('click', function() {
-            $(this).toggleClass('selected');
-            updateSkillsInput();
+    function updateAvailabilityData() {
+        const availability = {};
+        
+        $('.schedspot-day-column').each(function() {
+            const day = $(this).data('day');
+            const availableSlots = [];
+            
+            $(this).find('.schedspot-time-slot.available').each(function() {
+                availableSlots.push($(this).data('time'));
+            });
+            
+            availability[day] = availableSlots;
         });
         
-        // Initialize skills input
-        updateSkillsInput();
+        $('#availability-data').val(JSON.stringify(availability));
     }
 
     /**
-     * Handle avatar upload
+     * Validate profile form
      */
-    function handleAvatarUpload() {
-        $('#avatar-file-input').click();
-    }
-
-    /**
-     * Handle avatar file select
-     */
-    function handleAvatarFileSelect() {
-        const file = this.files[0];
-        if (!file) return;
-        
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            showMessage('Please select an image file', 'error');
-            return;
-        }
-        
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showMessage('Image file must be less than 5MB', 'error');
-            return;
-        }
-        
-        // Preview image
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            $('.current-avatar').attr('src', e.target.result);
-        };
-        reader.readAsDataURL(file);
-        
-        // Upload immediately
-        uploadAvatar(file);
-    }
-
-    /**
-     * Upload avatar
-     */
-    function uploadAvatar(file) {
-        const formData = new FormData();
-        formData.append('avatar', file);
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'users/avatar',
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    showMessage('Avatar updated successfully!', 'success');
-                    $('.current-avatar').attr('src', response.data.avatar_url);
-                } else {
-                    showMessage(response.message || 'Failed to upload avatar', 'error');
-                }
-            },
-            error: function() {
-                showMessage('Error uploading avatar', 'error');
-            }
-        });
-    }
-
-    /**
-     * Handle data export
-     */
-    function handleDataExport() {
-        if (!confirm(schedspot_frontend.strings.confirm_data_export)) {
-            return;
-        }
-        
-        const $btn = $(this);
-        $btn.prop('disabled', true);
-        $btn.html('<span class="dashicons dashicons-update spin"></span> Requesting...');
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'users/export-data',
-            method: 'POST',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    showMessage('Data export requested. You will receive an email with download instructions.', 'success');
-                } else {
-                    showMessage(response.message || 'Failed to request data export', 'error');
-                }
-            },
-            error: function() {
-                showMessage('Error requesting data export', 'error');
-            },
-            complete: function() {
-                $btn.prop('disabled', false);
-                $btn.html('<span class="dashicons dashicons-download"></span> Export My Data');
-            }
-        });
-    }
-
-    /**
-     * Handle account deletion
-     */
-    function handleAccountDeletion() {
-        if (!confirm(schedspot_frontend.strings.confirm_account_deletion)) {
-            return;
-        }
-        
-        // Double confirmation
-        if (!confirm('This action cannot be undone. Are you absolutely sure?')) {
-            return;
-        }
-        
-        const $btn = $(this);
-        $btn.prop('disabled', true);
-        $btn.html('<span class="dashicons dashicons-update spin"></span> Deleting...');
-        
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'users/delete-account',
-            method: 'DELETE',
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    showMessage('Account deletion initiated. You will be logged out shortly.', 'success');
-                    setTimeout(function() {
-                        window.location.href = '/';
-                    }, 3000);
-                } else {
-                    showMessage(response.message || 'Failed to delete account', 'error');
-                }
-            },
-            error: function() {
-                showMessage('Error deleting account', 'error');
-            },
-            complete: function() {
-                $btn.prop('disabled', false);
-                $btn.html('<span class="dashicons dashicons-trash"></span> Delete Account');
-            }
-        });
-    }
-
-    /**
-     * Validate form
-     */
-    function validateForm($form) {
+    function validateProfileForm() {
         let isValid = true;
         
-        $form.find('[required]').each(function() {
-            if (!validateField.call(this)) {
+        // Clear previous errors
+        $('.error-message').remove();
+        $('.schedspot-form-group').removeClass('error');
+
+        // Validate required fields
+        $('[required]').each(function() {
+            if (!$(this).val().trim()) {
                 isValid = false;
+                showFieldError($(this), schedspot_frontend.strings.field_required);
             }
         });
-        
-        return isValid;
-    }
 
-    /**
-     * Validate individual field
-     */
-    function validateField() {
-        const $field = $(this);
-        const value = $field.val().trim();
-        const fieldType = $field.attr('type');
-        const isRequired = $field.prop('required');
-        
-        // Remove previous error
-        $field.removeClass('error');
-        $field.siblings('.error-message').remove();
-        
-        // Check required
-        if (isRequired && !value) {
-            showFieldError($field, 'This field is required');
-            return false;
+        // Validate email
+        const email = $('#profile-email').val();
+        if (email && !isValidEmail(email)) {
+            isValid = false;
+            showFieldError($('#profile-email'), schedspot_frontend.strings.invalid_email);
         }
-        
-        // Type-specific validation
-        if (value) {
-            if (fieldType === 'email' && !isValidEmail(value)) {
-                showFieldError($field, 'Please enter a valid email address');
-                return false;
-            }
-            
-            if (fieldType === 'tel' && value.length < 10) {
-                showFieldError($field, 'Please enter a valid phone number');
-                return false;
-            }
-            
-            if (fieldType === 'url' && !isValidUrl(value)) {
-                showFieldError($field, 'Please enter a valid URL');
-                return false;
-            }
+
+        // Validate phone
+        const phone = $('#profile-phone').val();
+        if (phone && phone.length < 10) {
+            isValid = false;
+            showFieldError($('#profile-phone'), schedspot_frontend.strings.invalid_phone);
         }
-        
-        return true;
+
+        return isValid;
     }
 
     /**
      * Show field error
      */
     function showFieldError($field, message) {
-        $field.addClass('error');
-        $field.after(`<div class="error-message">${message}</div>`);
-    }
-
-    /**
-     * Handle auto-save
-     */
-    function handleAutoSave() {
-        const $field = $(this);
-        const fieldName = $field.attr('name');
-        const value = $field.val();
+        const $group = $field.closest('.schedspot-form-group');
+        $group.addClass('error');
         
-        // Debounce auto-save
-        clearTimeout($field.data('autoSaveTimeout'));
-        $field.data('autoSaveTimeout', setTimeout(function() {
-            autoSaveField(fieldName, value);
-        }, 1000));
+        if (!$group.find('.error-message').length) {
+            $group.append(`<div class="error-message">${message}</div>`);
+        }
     }
 
     /**
-     * Auto-save field
+     * Clear field error
      */
-    function autoSaveField(fieldName, value) {
-        $.ajax({
-            url: schedspot_frontend.rest_url + 'users/profile',
-            method: 'POST',
-            data: {
-                [fieldName]: value
-            },
-            beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', schedspot_frontend.nonce);
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Show subtle success indicator
-                    showAutoSaveSuccess(fieldName);
-                }
+    function clearFieldError($field) {
+        const $group = $field.closest('.schedspot-form-group');
+        $group.removeClass('error');
+        $group.find('.error-message').remove();
+    }
+
+    /**
+     * Save notification setting
+     */
+    function saveNotificationSetting(setting, value) {
+        $.post(schedspot_frontend.ajax_url, {
+            action: 'schedspot_save_notification_setting',
+            setting: setting,
+            value: value ? 1 : 0,
+            nonce: schedspot_frontend.nonce
+        })
+        .done(function(response) {
+            if (response.success) {
+                showNotification(schedspot_frontend.strings.setting_saved, 'success');
+            } else {
+                showNotification(response.data.message || schedspot_frontend.strings.error, 'error');
             }
+        })
+        .fail(function() {
+            showNotification(schedspot_frontend.strings.error, 'error');
         });
     }
 
     /**
-     * Show auto-save success
-     */
-    function showAutoSaveSuccess(fieldName) {
-        const $field = $(`[name="${fieldName}"]`);
-        $field.addClass('auto-saved');
-        setTimeout(function() {
-            $field.removeClass('auto-saved');
-        }, 2000);
-    }
-
-    /**
-     * Update profile UI
-     */
-    function updateProfileUI(data) {
-        // Update any UI elements with new data
-        if (data.avatar_url) {
-            $('.current-avatar').attr('src', data.avatar_url);
-        }
-    }
-
-    /**
-     * Show message
-     */
-    function showMessage(message, type) {
-        // Remove existing messages
-        $('.profile-message').remove();
-        
-        const messageHtml = `
-            <div class="profile-message ${type}">
-                ${message}
-            </div>
-        `;
-        
-        $('.tab-content.active').prepend(messageHtml);
-        
-        // Auto-hide success messages
-        if (type === 'success') {
-            setTimeout(function() {
-                $('.profile-message.success').fadeOut();
-            }, 5000);
-        }
-    }
-
-    /**
-     * Validate email
+     * Validate email format
      */
     function isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -528,31 +353,72 @@
     }
 
     /**
-     * Validate URL
+     * Show notification
      */
-    function isValidUrl(url) {
-        try {
-            new URL(url);
-            return true;
-        } catch {
-            return false;
-        }
+    function showNotification(message, type) {
+        // Remove existing notifications
+        $('.schedspot-notification').remove();
+
+        const notification = $(`<div class="schedspot-notification ${type}">${message}</div>`);
+        $('body').append(notification);
+
+        setTimeout(function() {
+            notification.fadeOut(function() {
+                $(this).remove();
+            });
+        }, 5000);
     }
 
     /**
-     * Escape HTML
+     * Initialize geolocation settings
      */
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    function initGeolocationSettings() {
+        $('#get-current-location').on('click', function() {
+            if (navigator.geolocation) {
+                $(this).prop('disabled', true).text(schedspot_frontend.strings.getting_location);
+                
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        $('#latitude').val(position.coords.latitude);
+                        $('#longitude').val(position.coords.longitude);
+                        
+                        // Reverse geocode to get address
+                        reverseGeocode(position.coords.latitude, position.coords.longitude);
+                        
+                        $('#get-current-location').prop('disabled', false).text(schedspot_frontend.strings.get_current_location);
+                        showNotification(schedspot_frontend.strings.location_updated, 'success');
+                    },
+                    function(error) {
+                        $('#get-current-location').prop('disabled', false).text(schedspot_frontend.strings.get_current_location);
+                        showNotification(schedspot_frontend.strings.location_error, 'error');
+                    }
+                );
+            } else {
+                showNotification(schedspot_frontend.strings.geolocation_not_supported, 'error');
+            }
+        });
     }
 
-    // Initialize when document is ready
-    $(document).ready(function() {
-        if ($('.schedspot-profile-content').length) {
-            initProfile();
-        }
-    });
+    /**
+     * Reverse geocode coordinates to address
+     */
+    function reverseGeocode(lat, lng) {
+        // This would typically use Google Maps API or similar service
+        // For now, just update the coordinates display
+        $('#current-coordinates').text(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+    }
+
+    // Initialize geolocation if on location tab
+    if ($('#location-settings').length) {
+        initGeolocationSettings();
+    }
+
+    // Export functions for global access
+    window.SchedSpotProfile = {
+        showNotification: showNotification,
+        validateProfileForm: validateProfileForm,
+        addSkillTag: addSkillTag,
+        updateAvailabilityData: updateAvailabilityData
+    };
 
 })(jQuery);

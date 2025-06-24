@@ -1,0 +1,458 @@
+/**
+ * SchedSpot Dashboard Styles
+ *
+ * @package SchedSpot
+ * @version 1.7.1
+ */
+
+/* Dashboard Container */
+.schedspot-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.schedspot-dashboard-container {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+/* Navigation Integration */
+.schedspot-dashboard .schedspot-navigation {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 15px 30px;
+    margin: 0 0 30px 0;
+    border-radius: 12px 12px 0 0;
+}
+
+/* Dashboard Header */
+.schedspot-dashboard-header {
+    padding: 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    text-align: center;
+}
+
+.schedspot-dashboard-header h2 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.schedspot-dashboard-header .user-welcome {
+    margin: 0;
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.schedspot-dashboard-header .user-role {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    margin-top: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Stats Grid */
+.schedspot-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 30px;
+    background: #f8f9fa;
+}
+
+.stat-card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e9ecef;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card .stat-number {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0073aa;
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.stat-card .stat-label {
+    font-size: 14px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.stat-card .stat-icon {
+    font-size: 24px;
+    margin-bottom: 15px;
+    color: #0073aa;
+}
+
+.stat-card .stat-content h3 {
+    font-size: 28px;
+    margin: 0 0 5px 0;
+    color: #0073aa;
+    font-weight: 700;
+}
+
+.stat-card .stat-content p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Dashboard Navigation Tabs */
+.schedspot-dashboard-nav {
+    display: flex;
+    background: #fff;
+    border-bottom: 1px solid #e9ecef;
+    padding: 0 30px;
+    overflow-x: auto;
+}
+
+.schedspot-dashboard-nav .nav-tab {
+    background: none;
+    border: none;
+    padding: 15px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.schedspot-dashboard-nav .nav-tab:hover {
+    color: #0073aa;
+    background: #f8f9fa;
+}
+
+.schedspot-dashboard-nav .nav-tab.active {
+    color: #0073aa;
+    border-bottom-color: #0073aa;
+    background: #f8f9fa;
+}
+
+/* Dashboard Content */
+.schedspot-dashboard-content {
+    padding: 30px;
+}
+
+.dashboard-tab {
+    display: none;
+}
+
+.dashboard-tab.active {
+    display: block;
+}
+
+/* Welcome Card */
+.dashboard-welcome {
+    margin-bottom: 30px;
+}
+
+.welcome-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.welcome-card h3 {
+    margin: 0 0 15px 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.welcome-card p {
+    margin: 0 0 25px 0;
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.welcome-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.welcome-actions .schedspot-btn {
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.welcome-actions .schedspot-btn-primary {
+    background: #fff;
+    color: #667eea;
+}
+
+.welcome-actions .schedspot-btn-primary:hover {
+    background: #f8f9fa;
+    transform: translateY(-1px);
+}
+
+.welcome-actions .schedspot-btn-secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.welcome-actions .schedspot-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Booking Cards */
+.bookings-grid {
+    display: grid;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.booking-card {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 25px;
+    transition: all 0.3s ease;
+}
+
+.booking-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.booking-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.booking-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.booking-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.booking-status.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.booking-status.confirmed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.booking-status.completed {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.booking-status.cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.booking-card-details {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.booking-card-details strong {
+    color: #333;
+}
+
+.booking-card-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.booking-card-actions .schedspot-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 6px;
+}
+
+/* Availability Toggle */
+.availability-toggle {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.availability-toggle h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.availability-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.availability-status.available {
+    background: #d4edda;
+    color: #155724;
+}
+
+.availability-status.unavailable {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.availability-toggle-btn {
+    background: #0073aa;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    margin-top: 15px;
+    transition: all 0.3s ease;
+}
+
+.availability-toggle-btn:hover {
+    background: #005a87;
+    transform: translateY(-1px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .schedspot-dashboard {
+        padding: 15px;
+    }
+    
+    .schedspot-stats-grid {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+    
+    .schedspot-dashboard-nav {
+        padding: 0 20px;
+    }
+    
+    .schedspot-dashboard-content {
+        padding: 20px;
+    }
+    
+    .welcome-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .welcome-actions .schedspot-btn {
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    .booking-card-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .booking-card-actions {
+        justify-content: center;
+    }
+}
+
+/* Loading States */
+.schedspot-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.schedspot-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Success/Error Messages */
+.schedspot-notice {
+    padding: 15px 20px;
+    margin: 20px 0;
+    border-radius: 6px;
+    border-left: 4px solid;
+}
+
+.schedspot-notice.success {
+    background: #d4edda;
+    border-left-color: #28a745;
+    color: #155724;
+}
+
+.schedspot-notice.error {
+    background: #f8d7da;
+    border-left-color: #dc3545;
+    color: #721c24;
+}
+
+.schedspot-notice.info {
+    background: #d1ecf1;
+    border-left-color: #17a2b8;
+    color: #0c5460;
+}
