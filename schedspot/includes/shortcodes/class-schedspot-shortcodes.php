@@ -1,9 +1,13 @@
 <?php
 /**
- * Shortcodes Class
+ * Legacy Shortcodes Class - Backwards Compatibility Wrapper
+ *
+ * This class maintains backwards compatibility while delegating
+ * functionality to the new modular shortcode classes.
  *
  * @package SchedSpot
- * @version 0.1.0
+ * @version 1.0.0
+ * @deprecated Use SchedSpot_Shortcodes_Core and related modular classes instead
  */
 
 // Prevent direct access
@@ -14,10 +18,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * SchedSpot_Shortcodes Class.
  *
+ * Legacy wrapper class that delegates to new modular shortcode classes.
+ *
  * @class SchedSpot_Shortcodes
- * @version 0.1.0
+ * @version 1.0.0
+ * @deprecated
  */
 class SchedSpot_Shortcodes {
+
+    /**
+     * Shortcodes core instance.
+     *
+     * @var SchedSpot_Shortcodes_Core
+     */
+    private $shortcodes_core;
 
     /**
      * Constructor.
@@ -25,27 +39,19 @@ class SchedSpot_Shortcodes {
      * @since 0.1.0
      */
     public function __construct() {
-        $this->init();
+        // Initialize the new modular shortcodes core
+        $this->shortcodes_core = new SchedSpot_Shortcodes_Core();
+
+        // Maintain backwards compatibility
+        $this->init_legacy_hooks();
     }
 
     /**
-     * Initialize shortcodes.
+     * Initialize legacy hooks for backwards compatibility.
      *
-     * @since 0.1.0
+     * @since 1.0.0
      */
-    public function init() {
-        $shortcodes = array(
-            'schedspot_booking_form' => 'booking_form',
-            'schedspot_service_list' => 'service_list',
-            'schedspot_dashboard'    => 'dashboard',
-            'schedspot_messages'     => 'messages',
-            'schedspot_profile'      => 'profile',
-        );
-
-        foreach ( $shortcodes as $shortcode => $function ) {
-            add_shortcode( $shortcode, array( $this, $function ) );
-        }
-
+    private function init_legacy_hooks() {
         // Hook to mark pages with shortcodes for navigation
         add_action( 'save_post', array( $this, 'mark_pages_with_shortcodes' ) );
 
@@ -94,6 +100,75 @@ class SchedSpot_Shortcodes {
             delete_post_meta( $post_id, '_schedspot_has_profile' );
         }
     }
+
+    /**
+     * Legacy method - delegates to shortcode core.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Shortcode_Booking_Form::render() instead
+     */
+    public function booking_form( $atts ) {
+        return SchedSpot_Shortcode_Booking_Form::render( $atts );
+    }
+
+    /**
+     * Legacy method - delegates to shortcode core.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Shortcode_Dashboard::render() instead
+     */
+    public function dashboard( $atts ) {
+        return SchedSpot_Shortcode_Dashboard::render( $atts );
+    }
+
+    /**
+     * Legacy method - delegates to shortcode core.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Shortcode_Messages::render() instead
+     */
+    public function messages( $atts ) {
+        return SchedSpot_Shortcode_Messages::render( $atts );
+    }
+
+    /**
+     * Legacy method - delegates to shortcode core.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Shortcode_Profile::render() instead
+     */
+    public function profile( $atts ) {
+        return SchedSpot_Shortcode_Profile::render( $atts );
+    }
+
+    /**
+     * Legacy method - basic service list functionality.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Shortcodes_Core::render_workers_grid() instead
+     */
+    public function service_list( $atts ) {
+        return $this->shortcodes_core->render_workers_grid( $atts );
+    }
+
+    /**
+     * Legacy method - kept for backwards compatibility.
+     *
+     * @since 0.1.0
+     */
+    public function maybe_create_missing_pages() {
+        // This functionality is now handled by the admin setup
+        // but kept for backwards compatibility
+    }
+
+    // All other methods have been moved to the appropriate modular classes:
+    // - SchedSpot_Shortcodes_Core: Core shortcode functionality and registration
+    // - SchedSpot_Shortcode_Booking_Form: Booking form functionality
+    // - SchedSpot_Shortcode_Dashboard: User dashboard functionality
+    // - SchedSpot_Shortcode_Messages: Messaging interface
+    // - SchedSpot_Shortcode_Profile: Profile management
+
+}
 
     /**
      * Booking form shortcode.

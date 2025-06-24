@@ -1,135 +1,287 @@
-# SchedSpot WordPress Plugin
+# SchedSpot - WordPress Service Booking & Marketplace Plugin
 
-A comprehensive WordPress service booking and marketplace plugin that combines appointment scheduling with a multi-vendor marketplace.
+[![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue.svg)](https://wordpress.org/)
+[![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple.svg)](https://php.net/)
+[![License](https://img.shields.io/badge/License-GPL%20v2%2B-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
+[![Version](https://img.shields.io/badge/Version-1.7.0-orange.svg)](https://github.com/schedspot/schedspot)
 
-## Version 2.0+ (Full Production Release)
+SchedSpot is a comprehensive WordPress plugin that combines appointment scheduling with a multi-vendor marketplace, inspired by Amelia and TaskRabbit. It enables businesses to create a complete service booking platform with worker management, payment processing, and customer communication.
 
-### Features
+## 🚀 Features
 
-- **Service Booking System**: Complete booking management with date/time selection and payment processing
-- **User Roles**: Customer, Worker, and Administrator roles with specific capabilities and role-switching
-- **Admin Dashboard**: Comprehensive backend management interface with role switcher
-- **Frontend Shortcodes**: Easy-to-use shortcodes for booking forms, service listings, and messaging
-- **Database Management**: Custom tables for efficient booking, service, and message data storage
-- **Responsive Design**: Mobile-friendly interface for all components
-- **Payment Integration**: Full WooCommerce integration with order management and commission tracking
-- **Messaging System**: Real-time messaging between clients and workers with file attachments
-- **Geolocation Services**: Location-based service matching with Google Maps integration
-- **SMS Notifications**: Twilio integration for booking confirmations and notifications
-- **Google Calendar Sync**: Two-way calendar synchronization for booking management
-- **Advanced Settings**: Comprehensive configuration options for all features
-- **Role Switching**: Admin role switching for testing different user experiences
-- **Enhanced Worker Frontend**: Complete settings management from frontend dashboard
-- **Bidirectional Navigation**: Seamless navigation between booking and dashboard interfaces
+### Core Functionality
+- **Service Booking System** - Complete appointment scheduling with time slot management
+- **Multi-Vendor Marketplace** - Support for multiple service providers (workers)
+- **User Role Management** - Customer, Worker, and Admin roles with specific capabilities
+- **Payment Processing** - WooCommerce integration with deposit and final payment options
+- **Real-time Messaging** - Private communication between customers and workers
+- **Calendar Integration** - Google Calendar sync with OAuth 2.0 authentication
 
-### Installation
+### Advanced Features
+- **Geofencing** - Location-based service restrictions and distance calculations
+- **SMS Notifications** - Twilio integration for booking confirmations and reminders
+- **REST API** - Complete API for external integrations and mobile apps
+- **Role Switching** - Admin role switching for testing different user experiences
+- **Responsive Design** - Mobile-first design optimized for all devices
+- **Modern UI/UX** - Professional interface with card-based layouts and animations
 
-1. Upload the `schedspot` folder to your `/wp-content/plugins/` directory
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Navigate to 'SchedSpot' in your WordPress admin to configure settings
+## 📋 Requirements
+
+- **WordPress:** 5.0 or higher
+- **PHP:** 7.4 or higher
+- **MySQL:** 5.6 or higher
+- **WooCommerce:** 4.0+ (for payment processing)
+
+### Optional Dependencies
+- **Google Maps API** (for geofencing features)
+- **Twilio Account** (for SMS notifications)
+- **Google Calendar API** (for calendar sync)
+
+## 🔧 Installation
+
+### Automatic Installation
+1. Download the plugin zip file
+2. Go to WordPress Admin → Plugins → Add New
+3. Click "Upload Plugin" and select the zip file
+4. Click "Install Now" and then "Activate"
+
+### Manual Installation
+1. Upload the `schedspot` folder to `/wp-content/plugins/`
+2. Activate the plugin through the WordPress admin panel
+3. Go to SchedSpot → Settings to configure the plugin
+
+### Database Setup
+The plugin automatically creates the required database tables on activation:
+- `wp_schedspot_bookings` - Stores booking information
+- `wp_schedspot_services` - Service definitions and pricing
+- `wp_schedspot_worker_services` - Worker-service assignments
+- `wp_schedspot_worker_availability` - Worker schedule management
+- `wp_schedspot_messages` - Internal messaging system
+- `wp_schedspot_service_areas` - Geofencing data
+
+## 📖 Usage Guide
 
 ### Shortcodes
 
-- `[schedspot_booking_form]` - Display the booking form with payment integration
-- `[schedspot_service_list]` - Show available services with booking links
-- `[schedspot_dashboard]` - User dashboard (requires login) with role-specific features
-- `[schedspot_messages]` - Messaging interface for client-worker communication
+#### Booking Form
+```php
+[schedspot_booking_form]
+```
+Displays the main booking form with service selection, worker choice, and scheduling.
 
-### Database Tables
+**Attributes:**
+- `service_id` - Pre-select a specific service
+- `worker_id` - Pre-select a specific worker
+- `style` - Form style (default, compact, wizard)
 
-The plugin creates the following custom tables:
-- `wp_schedspot_bookings` - Store booking information with payment tracking
-- `wp_schedspot_services` - Service catalog with pricing and categories
-- `wp_schedspot_worker_services` - Worker-service relationships with custom pricing
-- `wp_schedspot_worker_availability` - Worker availability schedules
-- `wp_schedspot_messages` - Private messaging between clients and workers
-- `wp_schedspot_service_areas` - Geolocation service area definitions
+#### Service Listing
+```php
+[schedspot_services]
+```
+Shows available services with descriptions and pricing.
 
-### User Roles
+**Attributes:**
+- `category` - Filter by service category
+- `limit` - Number of services to display
+- `columns` - Grid columns (1-4)
 
-- **SchedSpot Customer**: Can create bookings and view their booking history
-- **SchedSpot Worker**: Can manage bookings, set availability, and view earnings
-- **Administrator**: Full access to all plugin features and settings
+#### User Dashboard
+```php
+[schedspot_dashboard]
+```
+Displays role-specific dashboard (Customer, Worker, or Admin view).
 
-### Settings
+#### Worker Grid
+```php
+[schedspot_workers]
+```
+Shows available workers with profiles and ratings.
 
-Access plugin settings via **SchedSpot > Settings** in your WordPress admin:
+**Attributes:**
+- `service_id` - Show workers for specific service
+- `limit` - Number of workers to display
+- `layout` - Display layout (grid, list)
 
-- **General**: Timezone, date/time formats, currency
-- **Booking**: Default slot length, minimum notice, auto-approval
-- **Payment**: System fees, commission rates, WooCommerce integration
-- **Calendar**: Google Calendar sync configuration
-- **SMS**: Twilio integration for notifications
-- **Messaging**: File attachments, retention policies
-- **Email**: Notification templates and sender settings
-- **Geolocation**: Google Maps API and service area settings
-- **Advanced**: Debug mode, caching, rate limiting, data cleanup
+#### Messages Interface
+```php
+[schedspot_messages]
+```
+Private messaging interface between customers and workers.
 
-Additional admin features:
-- **Role Switcher**: Test different user experiences without logging out
-- **Analytics Dashboard**: Comprehensive booking and revenue statistics
+#### User Profile
+```php
+[schedspot_profile]
+```
+User profile management with settings and preferences.
 
-### Development
+### Page Setup
+Create the following pages with their respective shortcodes:
+- **Book Service** - `[schedspot_booking_form]`
+- **Services** - `[schedspot_services]`
+- **Dashboard** - `[schedspot_dashboard]`
+- **Messages** - `[schedspot_messages]`
+- **Profile** - `[schedspot_profile]`
+- **Workers** - `[schedspot_workers]`
 
-This plugin follows WordPress coding standards and uses:
-- PSR-4 autoloading structure
-- WordPress hooks and filters for extensibility
-- Modular architecture for easy maintenance
-- Comprehensive documentation
+## 🔌 API Documentation
+
+### REST API Endpoints
+
+Base URL: `/wp-json/schedspot/v1/`
+
+#### Bookings
+- `GET /bookings` - List bookings
+- `POST /bookings` - Create new booking
+- `GET /bookings/{id}` - Get specific booking
+- `PUT /bookings/{id}` - Update booking
+- `DELETE /bookings/{id}` - Delete booking
+
+#### Services
+- `GET /services` - List all services
+- `POST /services` - Create new service
+- `GET /services/{id}` - Get specific service
+- `PUT /services/{id}` - Update service
+- `DELETE /services/{id}` - Delete service
+
+#### Workers
+- `GET /workers` - List workers
+- `GET /workers/{id}` - Get worker profile
+- `GET /workers/{id}/availability` - Get worker availability
+- `PUT /workers/{id}/availability` - Update availability
+- `GET /workers/{id}/services` - Get worker services
+- `PUT /workers/{id}/services` - Update worker services
+
+#### Messages
+- `GET /messages` - List conversations
+- `POST /messages` - Send message
+- `GET /messages/{id}` - Get conversation
+- `PUT /messages/{id}/read` - Mark as read
+
+#### Availability
+- `GET /availability` - Check availability
+- `POST /availability/check` - Validate time slot
+
+### Authentication
+All API endpoints use WordPress REST API authentication:
+- **Nonce-based** for same-origin requests
+- **Application Passwords** for external applications
+- **OAuth 2.0** for third-party integrations
+
+### Response Format
+```json
+{
+  "success": true,
+  "data": {
+    // Response data
+  },
+  "message": "Success message"
+}
+```
+
+### Error Handling
+```json
+{
+  "success": false,
+  "error": {
+    "code": "error_code",
+    "message": "Error description"
+  }
+}
+```
+
+## 🛠️ Development Setup
+
+### Prerequisites
+- Node.js 14+ and npm
+- Composer
+- WordPress development environment
+- Git
+
+### Local Development
+1. Clone the repository:
+```bash
+git clone https://github.com/schedspot/schedspot.git
+cd schedspot
+```
+
+2. Install dependencies:
+```bash
+composer install
+npm install
+```
+
+3. Build assets:
+```bash
+npm run build
+```
+
+4. Watch for changes during development:
+```bash
+npm run dev
+```
 
 ### File Structure
-
 ```
 schedspot/
-├── schedspot.php (main plugin file)
-├── includes/
-│   ├── class-schedspot-install.php
-│   ├── models/
-│   │   └── class-schedspot-booking.php
-│   └── shortcodes/
-│       └── class-schedspot-shortcodes.php
-├── admin/
-│   └── class-schedspot-admin.php
-└── public/
-    └── class-schedspot-public.php
+├── admin/                 # Admin interface classes
+├── assets/               # CSS, JS, and image files
+├── includes/             # Core plugin classes
+│   ├── api/             # REST API endpoints
+│   ├── integrations/    # Third-party integrations
+│   ├── messaging/       # Messaging system
+│   ├── models/          # Data models
+│   └── shortcodes/      # Shortcode handlers
+├── public/              # Frontend functionality
+├── templates/           # Template files
+│   ├── admin/          # Admin templates
+│   ├── frontend/       # Frontend templates
+│   └── shortcodes/     # Shortcode templates
+└── schedspot.php       # Main plugin file
 ```
 
-### Hooks and Filters
+### Coding Standards
+- Follow WordPress Coding Standards
+- Use `SchedSpot_` prefix for all classes
+- Use `schedspot_` prefix for functions and hooks
+- Document all functions with PHPDoc
+- Use meaningful variable and function names
 
-The plugin provides numerous hooks for customization:
+### Testing
+Run the debug test page to verify functionality:
+```
+/wp-content/plugins/schedspot/debug-test.php
+```
 
-**Actions:**
-- `schedspot_booking_created` - Fired when a new booking is created
-- `schedspot_booking_updated` - Fired when a booking is updated
-- `schedspot_booking_deleted` - Fired when a booking is deleted
+This page checks:
+- Database tables and data
+- User roles and permissions
+- REST API endpoints
+- Asset loading
+- WordPress integration
 
-**Filters:**
-- `schedspot_booking_statuses` - Modify available booking statuses
+## 🤝 Contributing
 
-### Requirements
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-- WordPress 5.0 or higher
-- PHP 7.4 or higher
-- MySQL 5.6 or higher
+## 📄 License
 
-### Support
+This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) file for details.
 
-For support and documentation, visit the plugin settings page in your WordPress admin.
+## 🆘 Support
 
-### Changelog
+- **Documentation:** [Plugin Documentation](https://schedspot.com/docs)
+- **Issues:** [GitHub Issues](https://github.com/schedspot/schedspot/issues)
+- **Support Forum:** [WordPress.org Support](https://wordpress.org/support/plugin/schedspot)
+- **Email:** support@schedspot.com
 
-#### Version 0.1.0
-- Initial MVP release
-- Core booking functionality
-- Admin interface
-- Frontend shortcodes
-- User role management
-- Basic styling and responsive design
+## 🏆 Credits
 
-### License
+SchedSpot is developed and maintained by the SchedSpot Team. Special thanks to all contributors who have helped make this plugin better.
 
-GPL v2 or later
+---
 
-### Credits
-
-Developed following WordPress best practices and coding standards.
+**Made with ❤️ for the WordPress community**

@@ -52,11 +52,15 @@ class SchedSpot_Public {
         if ( $this->has_schedspot_shortcode() ) {
             wp_enqueue_script( 'jquery' );
 
-            // Enqueue main frontend CSS
-            wp_enqueue_style( 'schedspot-frontend-enhanced', SCHEDSPOT_PLUGIN_URL . 'assets/css/frontend-enhanced.css', array(), SCHEDSPOT_VERSION );
+            // Enqueue main frontend CSS (only if not already enqueued by shortcode system)
+            if ( ! wp_style_is( 'schedspot-frontend-enhanced', 'enqueued' ) ) {
+                wp_enqueue_style( 'schedspot-frontend-enhanced', SCHEDSPOT_PLUGIN_URL . 'assets/css/frontend-enhanced.css', array(), SCHEDSPOT_VERSION );
+            }
 
-            // Enqueue main frontend JavaScript
-            wp_enqueue_script( 'schedspot-frontend', SCHEDSPOT_PLUGIN_URL . 'assets/js/frontend.js', array( 'jquery' ), SCHEDSPOT_VERSION, true );
+            // Enqueue main frontend JavaScript (only if not already enqueued by shortcode system)
+            if ( ! wp_script_is( 'schedspot-frontend', 'enqueued' ) ) {
+                wp_enqueue_script( 'schedspot-frontend', SCHEDSPOT_PLUGIN_URL . 'assets/js/frontend.js', array( 'jquery' ), SCHEDSPOT_VERSION, true );
+            }
 
             // Localize script with data
             wp_localize_script( 'schedspot-frontend', 'schedspot_frontend', array(
@@ -104,6 +108,8 @@ class SchedSpot_Public {
             'schedspot_service_list',
             'schedspot_dashboard',
             'schedspot_messages',
+            'schedspot_profile',
+            'schedspot_workers_grid',
         );
         
         foreach ( $shortcodes as $shortcode ) {

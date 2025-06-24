@@ -199,7 +199,7 @@ class SchedSpot_Booking {
      * @param int $id Booking ID.
      * @return bool True if booking found, false otherwise.
      */
-    private function get_booking( $id ) {
+    public function get_booking( $id ) {
         global $wpdb;
 
         $booking = $wpdb->get_row(
@@ -582,5 +582,17 @@ class SchedSpot_Booking {
      */
     public function get_client_name() {
         return isset( $this->client_details['name'] ) ? $this->client_details['name'] : '';
+    }
+
+    /**
+     * Get booking by ID (static method).
+     *
+     * @since 1.0.0
+     * @param int $booking_id Booking ID.
+     * @return SchedSpot_Booking|null Booking object or null if not found.
+     */
+    public static function get_booking_by_id( $booking_id ) {
+        $booking = new self( $booking_id );
+        return $booking->id > 0 ? $booking : null;
     }
 }

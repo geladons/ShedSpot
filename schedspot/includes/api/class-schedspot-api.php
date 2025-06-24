@@ -1278,20 +1278,31 @@ class SchedSpot_API {
         if ( $service_id > 0 ) {
             // Get workers who offer this service
             global $wpdb;
-            $worker_ids = $wpdb->get_col( $wpdb->prepare(
-                "SELECT worker_id FROM {$wpdb->prefix}schedspot_worker_services
-                 WHERE service_id = %d AND is_enabled = 1",
-                $service_id
-            ) );
 
-            if ( empty( $worker_ids ) ) {
-                return rest_ensure_response( array() );
+            // Check if worker_services table exists
+            $table_name = $wpdb->prefix . 'schedspot_worker_services';
+            if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) != $table_name ) {
+                // Table doesn't exist, fall back to all workers
+                error_log( 'SchedSpot: worker_services table does not exist, returning all workers' );
+                $users = get_users( array( 'role' => 'schedspot_worker' ) );
+            } else {
+                $worker_ids = $wpdb->get_col( $wpdb->prepare(
+                    "SELECT worker_id FROM {$wpdb->prefix}schedspot_worker_services
+                     WHERE service_id = %d AND is_enabled = 1",
+                    $service_id
+                ) );
+
+                if ( empty( $worker_ids ) ) {
+                    // No workers assigned to this service, return all workers as fallback
+                    error_log( 'SchedSpot: No workers assigned to service ' . $service_id . ', returning all workers' );
+                    $users = get_users( array( 'role' => 'schedspot_worker' ) );
+                } else {
+                    $users = get_users( array(
+                        'include' => $worker_ids,
+                        'role'    => 'schedspot_worker',
+                    ) );
+                }
             }
-
-            $users = get_users( array(
-                'include' => $worker_ids,
-                'role'    => 'schedspot_worker',
-            ) );
         } else {
             // Get all workers
             $users = get_users( array( 'role' => 'schedspot_worker' ) );
@@ -1301,6 +1312,9 @@ class SchedSpot_API {
         foreach ( $users as $user ) {
             $data[] = $this->prepare_worker_for_response( $user, $service_id );
         }
+
+        // Log for debugging
+        error_log( 'SchedSpot API: Returning ' . count( $data ) . ' workers for service_id: ' . $service_id );
 
         return rest_ensure_response( $data );
     }
@@ -1560,11 +1574,25 @@ class SchedSpot_API {
     private function prepare_worker_for_response( $user, $service_id = 0 ) {
         global $wpdb;
 
+        // Get worker profile data
+        $profile = get_user_meta( $user->ID, 'schedspot_worker_profile', true );
+        if ( ! is_array( $profile ) ) {
+            $profile = array();
+        }
+
         $data = array(
             'id'           => $user->ID,
             'name'         => $user->display_name,
             'email'        => $user->user_email,
             'registered'   => $user->user_registered,
+            'avatar'       => get_avatar_url( $user->ID ),
+            'bio'          => $profile['bio'] ?? '',
+            'skills'       => $profile['skills'] ?? '',
+            'hourly_rate'  => $profile['hourly_rate'] ?? 50,
+            'rating'       => $profile['rating'] ?? 5.0,
+            'review_count' => $profile['review_count'] ?? 0,
+            'completed_jobs' => $profile['completed_jobs'] ?? 0,
+            'is_available' => get_user_meta( $user->ID, 'schedspot_is_available', true ) === '1',
             'services'     => array(),
         );
 

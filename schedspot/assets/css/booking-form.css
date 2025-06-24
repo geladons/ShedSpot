@@ -1,0 +1,266 @@
+/**
+ * SchedSpot Booking Form Styles
+ *
+ * @package SchedSpot
+ * @version 1.0.0
+ */
+
+/* Form Row Enhancements */
+.schedspot-form-row.focused {
+    transform: translateY(-2px);
+}
+
+.schedspot-form-row.error input,
+.schedspot-form-row.error select,
+.schedspot-form-row.error textarea {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.error-message {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
+    display: block;
+}
+
+/* Enhanced Button States */
+.schedspot-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Form Section Animations */
+.schedspot-form-section {
+    opacity: 0;
+    animation: slideInUp 0.6s ease-out forwards;
+}
+
+.schedspot-form-section:nth-child(1) { animation-delay: 0.1s; }
+.schedspot-form-section:nth-child(2) { animation-delay: 0.2s; }
+.schedspot-form-section:nth-child(3) { animation-delay: 0.3s; }
+.schedspot-form-section:nth-child(4) { animation-delay: 0.4s; }
+.schedspot-form-section:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Workers Grid */
+.schedspot-workers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.worker-card {
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.worker-card:hover {
+    border-color: #0073aa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.15);
+}
+
+.worker-card.selected {
+    border-color: #0073aa;
+    background: #f0f8ff;
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.2);
+}
+
+.worker-card.unavailable {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #f8f8f8;
+}
+
+.worker-card.unavailable:hover {
+    transform: none;
+    border-color: #e0e0e0;
+    box-shadow: none;
+}
+
+.worker-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    overflow: hidden;
+    border: 3px solid #e0e0e0;
+}
+
+.worker-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.worker-info h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.worker-rating {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.worker-rating .stars {
+    color: #ffc107;
+    margin-right: 5px;
+}
+
+.worker-rating .rating-text {
+    font-size: 14px;
+    color: #666;
+}
+
+.worker-specialties {
+    margin-bottom: 15px;
+}
+
+.worker-specialties .specialty-tag {
+    display: inline-block;
+    background: #e9ecef;
+    color: #495057;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    margin: 2px;
+}
+
+.worker-price {
+    font-size: 16px;
+    font-weight: bold;
+    color: #0073aa;
+    margin-bottom: 15px;
+}
+
+.worker-availability {
+    font-size: 12px;
+    color: #28a745;
+    margin-bottom: 15px;
+}
+
+.worker-availability.unavailable {
+    color: #dc3545;
+}
+
+.worker-actions {
+    text-align: center;
+}
+
+.schedspot-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.schedspot-btn-primary {
+    background: #0073aa;
+    color: #fff;
+}
+
+.schedspot-btn-primary:hover {
+    background: #005a87;
+}
+
+.schedspot-btn-disabled {
+    background: #ccc;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.worker-selection-mode {
+    margin-bottom: 15px;
+}
+
+.worker-selection-mode label {
+    display: block;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.worker-selection-mode input[type="radio"] {
+    margin-right: 8px;
+}
+
+/* Notifications */
+.schedspot-notice {
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.schedspot-notice.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.schedspot-notice.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.schedspot-notice.warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.schedspot-notice.info {
+    background: #cce5ff;
+    color: #004085;
+    border: 1px solid #b3d7ff;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .schedspot-workers-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .worker-card {
+        padding: 15px;
+    }
+    
+    .worker-avatar {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .worker-info h4 {
+        font-size: 16px;
+    }
+    
+    .schedspot-form-section {
+        animation: none;
+        opacity: 1;
+    }
+}

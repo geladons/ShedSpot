@@ -1,9 +1,13 @@
 <?php
 /**
- * Admin Class
+ * Legacy Admin Class - Backwards Compatibility Wrapper
+ *
+ * This class maintains backwards compatibility while delegating
+ * functionality to the new modular admin classes.
  *
  * @package SchedSpot
- * @version 0.1.0
+ * @version 1.0.0
+ * @deprecated Use SchedSpot_Admin_Core and related modular classes instead
  */
 
 // Prevent direct access
@@ -14,10 +18,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * SchedSpot_Admin Class.
  *
+ * Legacy wrapper class that delegates to new modular admin classes.
+ *
  * @class SchedSpot_Admin
- * @version 0.1.0
+ * @version 1.0.0
+ * @deprecated
  */
 class SchedSpot_Admin {
+
+    /**
+     * Admin core instance.
+     *
+     * @var SchedSpot_Admin_Core
+     */
+    private $admin_core;
 
     /**
      * Constructor.
@@ -25,97 +39,144 @@ class SchedSpot_Admin {
      * @since 0.1.0
      */
     public function __construct() {
-        $this->init();
+        // Initialize the new modular admin core
+        $this->admin_core = new SchedSpot_Admin_Core();
+
+        // Maintain backwards compatibility
+        $this->init_legacy_hooks();
     }
 
     /**
-     * Initialize admin functionality.
+     * Initialize legacy hooks for backwards compatibility.
      *
-     * @since 0.1.0
+     * @since 1.0.0
      */
-    public function init() {
-        add_action( 'admin_menu', array( $this, 'admin_menu' ) );
-        add_action( 'admin_init', array( $this, 'admin_init' ) );
-        add_action( 'admin_enqueue_scripts', array( $this, 'admin_scripts' ) );
-        add_filter( 'plugin_action_links_' . SCHEDSPOT_PLUGIN_BASENAME, array( $this, 'plugin_action_links' ) );
-        add_action( 'wp_ajax_schedspot_switch_role', array( $this, 'handle_role_switch' ) );
-        add_action( 'admin_bar_menu', array( $this, 'add_admin_bar_role_switcher' ), 100 );
+    private function init_legacy_hooks() {
+        // These methods are now handled by SchedSpot_Admin_Core
+        // but we maintain the hooks for any external code that might depend on them
     }
 
     /**
-     * Add admin menu items.
+     * Legacy method - delegates to admin core.
      *
      * @since 0.1.0
+     * @deprecated Use SchedSpot_Admin_Core::dashboard_page() instead
      */
-    public function admin_menu() {
-        // Main menu
-        add_menu_page(
-            __( 'SchedSpot', 'schedspot' ),
-            __( 'SchedSpot', 'schedspot' ),
-            'manage_options',
-            'schedspot',
-            array( $this, 'dashboard_page' ),
-            'dashicons-calendar-alt',
-            30
-        );
-
-        // Bookings submenu
-        add_submenu_page(
-            'schedspot',
-            __( 'Bookings', 'schedspot' ),
-            __( 'Bookings', 'schedspot' ),
-            'manage_options',
-            'schedspot-bookings',
-            array( $this, 'bookings_page' )
-        );
-
-        // Services submenu
-        add_submenu_page(
-            'schedspot',
-            __( 'Services', 'schedspot' ),
-            __( 'Services', 'schedspot' ),
-            'manage_options',
-            'schedspot-services',
-            array( $this, 'services_page' )
-        );
-
-        // Workers submenu
-        add_submenu_page(
-            'schedspot',
-            __( 'Workers', 'schedspot' ),
-            __( 'Workers', 'schedspot' ),
-            'manage_options',
-            'schedspot-workers',
-            array( $this, 'workers_page' )
-        );
-
-        // Settings submenu
-        add_submenu_page(
-            'schedspot',
-            __( 'Settings', 'schedspot' ),
-            __( 'Settings', 'schedspot' ),
-            'manage_options',
-            'schedspot-settings',
-            array( $this, 'settings_page' )
-        );
-
-        // Role Switcher submenu
-        add_submenu_page(
-            'schedspot',
-            __( 'Role Switcher', 'schedspot' ),
-            __( 'Role Switcher', 'schedspot' ),
-            'manage_options',
-            'schedspot-role-switcher',
-            array( $this, 'role_switcher_page' )
-        );
+    public function dashboard_page() {
+        return $this->admin_core->dashboard_page();
     }
 
     /**
-     * Initialize admin settings.
+     * Legacy method - delegates to admin bookings.
      *
      * @since 0.1.0
+     * @deprecated Use SchedSpot_Admin_Bookings::bookings_page() instead
+     */
+    public function bookings_page() {
+        return SchedSpot_Admin_Bookings::bookings_page();
+    }
+
+    /**
+     * Legacy method - delegates to admin services.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Admin_Services::services_page() instead
+     */
+    public function services_page() {
+        return SchedSpot_Admin_Services::services_page();
+    }
+
+    /**
+     * Legacy method - delegates to admin workers.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Admin_Workers::workers_page() instead
+     */
+    public function workers_page() {
+        return SchedSpot_Admin_Workers::workers_page();
+    }
+
+    /**
+     * Legacy method - delegates to admin settings.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Admin_Settings::settings_page() instead
+     */
+    public function settings_page() {
+        return SchedSpot_Admin_Settings::settings_page();
+    }
+
+    /**
+     * Legacy method - delegates to admin core.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Admin_Core::role_switcher_page() instead
+     */
+    public function role_switcher_page() {
+        return $this->admin_core->role_switcher_page();
+    }
+
+    /**
+     * Legacy method - functionality moved to modular classes.
+     *
+     * @since 0.1.0
+     * @deprecated Functionality moved to SchedSpot_Admin_Settings
      */
     public function admin_init() {
+        // Settings registration is now handled by SchedSpot_Admin_Settings
+        // This method is kept for backwards compatibility but does nothing
+    }
+
+    /**
+     * Legacy method - functionality moved to modular classes.
+     *
+     * @since 0.1.0
+     * @deprecated Asset enqueuing moved to SchedSpot_Admin_Core
+     */
+    public function admin_scripts( $hook ) {
+        // Asset enqueuing is now handled by SchedSpot_Admin_Core
+        // This method is kept for backwards compatibility but does nothing
+    }
+
+    /**
+     * Legacy method - delegates to admin core.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Admin_Core::plugin_action_links() instead
+     */
+    public function plugin_action_links( $links ) {
+        return $this->admin_core->plugin_action_links( $links );
+    }
+
+    /**
+     * Legacy method - delegates to admin core.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Admin_Core::handle_role_switch() instead
+     */
+    public function handle_role_switch() {
+        return $this->admin_core->handle_role_switch();
+    }
+
+    /**
+     * Legacy method - delegates to admin core.
+     *
+     * @since 0.1.0
+     * @deprecated Use SchedSpot_Admin_Core::add_admin_bar_role_switcher() instead
+     */
+    public function add_admin_bar_role_switcher( $wp_admin_bar ) {
+        return $this->admin_core->add_admin_bar_role_switcher( $wp_admin_bar );
+    }
+
+    // All other methods have been moved to the appropriate modular classes:
+    // - SchedSpot_Admin_Core: Core admin functionality, menus, assets
+    // - SchedSpot_Admin_Bookings: Booking management
+    // - SchedSpot_Admin_Services: Service management
+    // - SchedSpot_Admin_Workers: Worker management
+    // - SchedSpot_Admin_Settings: Settings and configuration
+    // - SchedSpot_Admin_Analytics: Analytics and reporting
+
+}
         // Register settings
         register_setting( 'schedspot_general_settings', 'schedspot_default_timezone' );
         register_setting( 'schedspot_general_settings', 'schedspot_date_format' );
@@ -976,11 +1037,31 @@ class SchedSpot_Admin {
      * @since 1.0.0
      */
     public function handle_role_switch() {
-        if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( $_POST['nonce'], 'schedspot_role_switch' ) ) {
-            wp_die( __( 'Permission denied.', 'schedspot' ) );
+        // Check permissions
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Permission denied.', 'schedspot' ) ) );
+        }
+
+        // Verify nonce - check both possible nonce names for compatibility
+        $nonce_valid = false;
+        if ( isset( $_POST['nonce'] ) ) {
+            $nonce_valid = wp_verify_nonce( $_POST['nonce'], 'schedspot_switch_role' ) ||
+                          wp_verify_nonce( $_POST['nonce'], 'schedspot_role_switch' );
+        }
+
+        if ( ! $nonce_valid ) {
+            wp_send_json_error( array( 'message' => __( 'Security check failed.', 'schedspot' ) ) );
         }
 
         $target_role = sanitize_text_field( $_POST['role'] );
+
+        // Validate target role
+        $allowed_roles = array( 'administrator', 'schedspot_worker', 'schedspot_customer' );
+        if ( ! in_array( $target_role, $allowed_roles ) ) {
+            wp_send_json_error( array( 'message' => __( 'Invalid role selected.', 'schedspot' ) ) );
+        }
+
+        // Update user meta
         update_user_meta( get_current_user_id(), 'schedspot_admin_role_mode', $target_role );
 
         wp_send_json_success( array(
