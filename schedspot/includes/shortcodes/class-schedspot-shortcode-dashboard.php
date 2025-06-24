@@ -46,15 +46,28 @@ class SchedSpot_Shortcode_Dashboard {
             return $this->render_login_required();
         }
 
+        // Enqueue dashboard assets
+        wp_enqueue_style( 'schedspot-frontend-enhanced' );
+        wp_enqueue_style( 'schedspot-dashboard', SCHEDSPOT_PLUGIN_URL . 'assets/css/dashboard.css', array(), SCHEDSPOT_VERSION );
+        wp_enqueue_script( 'schedspot-frontend' );
+        wp_enqueue_script( 'schedspot-dashboard', SCHEDSPOT_PLUGIN_URL . 'assets/js/dashboard.js', array( 'jquery', 'schedspot-frontend' ), SCHEDSPOT_VERSION, true );
+
         // Parse attributes
         $atts = shortcode_atts( array(
             'view' => 'bookings',
         ), $atts, 'schedspot_dashboard' );
 
         $current_user = wp_get_current_user();
-        $user_role = $this->get_user_primary_role( $current_user );
-        
-        // Get dashboard data based on user role
+
+        // Use SchedSpot's effective user role detection for admin role switching
+        $user_role = SchedSpot()->get_effective_user_role();
+
+        // If no effective role found, fall back to primary role detection
+        if ( empty( $user_role ) ) {
+            $user_role = $this->get_user_primary_role( $current_user );
+        }
+
+        // Get dashboard data based on effective user role
         $dashboard_data = $this->get_dashboard_data( $current_user, $user_role );
         
         // Handle AJAX requests

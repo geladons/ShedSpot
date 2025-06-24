@@ -13,6 +13,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 ?>
 
 <div class="schedspot-dashboard-container">
+    <!-- Navigation Bar -->
+    <div class="schedspot-navigation">
+        <div class="schedspot-nav-links">
+            <a href="<?php echo esc_url( home_url( '/?schedspot_action=booking_form' ) ); ?>" class="schedspot-nav-link">
+                <span class="dashicons dashicons-calendar-alt"></span>
+                <?php _e( 'Book a Service', 'schedspot' ); ?>
+            </a>
+            <a href="<?php echo esc_url( home_url( '/?schedspot_action=dashboard' ) ); ?>" class="schedspot-nav-link active">
+                <span class="dashicons dashicons-list-view"></span>
+                <?php _e( 'My Bookings', 'schedspot' ); ?>
+            </a>
+            <a href="<?php echo esc_url( home_url( '/?schedspot_action=messages' ) ); ?>" class="schedspot-nav-link">
+                <span class="dashicons dashicons-email-alt"></span>
+                <?php _e( 'Messages', 'schedspot' ); ?>
+            </a>
+            <a href="<?php echo esc_url( home_url( '/?schedspot_action=profile' ) ); ?>" class="schedspot-nav-link">
+                <span class="dashicons dashicons-admin-users"></span>
+                <?php _e( 'Profile', 'schedspot' ); ?>
+            </a>
+        </div>
+    </div>
+
     <?php if ( isset( $_GET['updated'] ) ) : ?>
         <div class="schedspot-notice success">
             <?php _e( 'Settings updated successfully!', 'schedspot' ); ?>
@@ -21,10 +43,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
     <!-- Dashboard Header -->
     <div class="schedspot-dashboard-header">
-        <div class="user-welcome">
-            <h2><?php printf( __( 'Welcome back, %s!', 'schedspot' ), esc_html( $dashboard_data['user']->display_name ) ); ?></h2>
-            <p><?php _e( 'Manage your bookings, availability, and earnings from your worker dashboard.', 'schedspot' ); ?></p>
-        </div>
+        <h2><?php printf( __( 'Welcome back, %s!', 'schedspot' ), esc_html( $dashboard_data['user']->display_name ) ); ?></h2>
+        <p class="user-welcome"><?php _e( 'Manage your bookings, availability, and earnings from your worker dashboard.', 'schedspot' ); ?></p>
+        <span class="user-role"><?php _e( 'Worker', 'schedspot' ); ?></span>
+    </div>
         
         <div class="availability-toggle">
             <form method="post" class="availability-form">
@@ -46,21 +68,45 @@ if ( ! defined( 'ABSPATH' ) ) {
         </div>
     </div>
 
+    <!-- Availability Toggle -->
+    <div class="availability-toggle">
+        <h3><?php _e( 'Availability Status', 'schedspot' ); ?></h3>
+        <div class="availability-status <?php echo $dashboard_data['worker_profile']['is_available'] ? 'available' : 'unavailable'; ?>">
+            <span class="dashicons <?php echo $dashboard_data['worker_profile']['is_available'] ? 'dashicons-yes-alt' : 'dashicons-dismiss'; ?>"></span>
+            <?php echo $dashboard_data['worker_profile']['is_available'] ? __( 'Available for Bookings', 'schedspot' ) : __( 'Currently Unavailable', 'schedspot' ); ?>
+        </div>
+        <button type="button" class="availability-toggle-btn" data-worker-id="<?php echo esc_attr( $dashboard_data['user']->ID ); ?>">
+            <?php echo $dashboard_data['worker_profile']['is_available'] ? __( 'Set Unavailable', 'schedspot' ) : __( 'Set Available', 'schedspot' ); ?>
+        </button>
+    </div>
+
     <!-- Quick Stats -->
     <div class="schedspot-stats-grid">
         <div class="stat-card">
+            <div class="stat-icon">
+                <span class="dashicons dashicons-calendar-alt"></span>
+            </div>
             <div class="stat-number"><?php echo esc_html( $dashboard_data['stats']['total_bookings'] ); ?></div>
             <div class="stat-label"><?php _e( 'Total Bookings', 'schedspot' ); ?></div>
         </div>
         <div class="stat-card">
+            <div class="stat-icon">
+                <span class="dashicons dashicons-clock"></span>
+            </div>
             <div class="stat-number"><?php echo esc_html( $dashboard_data['stats']['pending_bookings'] ); ?></div>
             <div class="stat-label"><?php _e( 'Pending', 'schedspot' ); ?></div>
         </div>
         <div class="stat-card">
+            <div class="stat-icon">
+                <span class="dashicons dashicons-yes"></span>
+            </div>
             <div class="stat-number"><?php echo esc_html( $dashboard_data['stats']['confirmed_bookings'] ); ?></div>
             <div class="stat-label"><?php _e( 'Confirmed', 'schedspot' ); ?></div>
         </div>
         <div class="stat-card">
+            <div class="stat-icon">
+                <span class="dashicons dashicons-money-alt"></span>
+            </div>
             <div class="stat-number">$<?php echo number_format( $dashboard_data['stats']['this_month_earnings'], 2 ); ?></div>
             <div class="stat-label"><?php _e( 'This Month', 'schedspot' ); ?></div>
         </div>

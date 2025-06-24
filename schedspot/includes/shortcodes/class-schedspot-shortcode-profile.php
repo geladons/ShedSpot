@@ -52,7 +52,14 @@ class SchedSpot_Shortcode_Profile {
         ), $atts, 'schedspot_profile' );
 
         $current_user = wp_get_current_user();
-        $user_role = $this->get_user_primary_role( $current_user );
+
+        // Use SchedSpot's effective user role detection for admin role switching
+        $user_role = SchedSpot()->get_effective_user_role();
+
+        // If no effective role found, fall back to primary role detection
+        if ( empty( $user_role ) ) {
+            $user_role = $this->get_user_primary_role( $current_user );
+        }
         
         // Handle form submissions
         $this->handle_profile_actions();

@@ -332,16 +332,123 @@ jQuery(document).ready(function($) {
         },
 
         renderCalendar: function() {
+            if (!this.currentWorkerId) {
+                $('#schedule-calendar').html('<p>Please select a worker to view their calendar.</p>');
+                return;
+            }
+
             var monthNames = [
                 'January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'
             ];
-            
+
             var monthYear = monthNames[this.currentMonth.getMonth()] + ' ' + this.currentMonth.getFullYear();
             $('#current-month').text(monthYear);
-            
-            // Basic calendar rendering - in a full implementation, this would be more sophisticated
-            $('#schedule-calendar').html('<p>Calendar view for ' + monthYear + ' (Implementation pending)</p>');
+
+            // Generate calendar HTML
+            var calendarHtml = this.generateCalendarHTML();
+            $('#schedule-calendar').html(calendarHtml);
+        },
+
+        generateCalendarHTML: function() {
+            var year = this.currentMonth.getFullYear();
+            var month = this.currentMonth.getMonth();
+
+            // Get first day of month and number of days
+            var firstDay = new Date(year, month, 1);
+            var lastDay = new Date(year, month + 1, 0);
+            var daysInMonth = lastDay.getDate();
+            var startingDayOfWeek = firstDay.getDay();
+
+            var html = '<table class="calendar-table">';
+            html += '<thead><tr>';
+            html += '<th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>';
+            html += '</tr></thead><tbody>';
+
+            var date = 1;
+
+            // Generate calendar rows
+            for (var week = 0; week < 6; week++) {
+                html += '<tr>';
+
+                for (var day = 0; day < 7; day++) {
+                    if (week === 0 && day < startingDayOfWeek) {
+                        html += '<td class="calendar-day empty"></td>';
+                    } else if (date > daysInMonth) {
+                        html += '<td class="calendar-day empty"></td>';
+                    } else {
+                        var cellDate = new Date(year, month, date);
+                        var dateStr = cellDate.toISOString().split('T')[0];
+                        var dayClass = this.getDayClass(cellDate);
+
+                        html += '<td class="calendar-day ' + dayClass + '" data-date="' + dateStr + '">';
+                        html += '<div class="day-number">' + date + '</div>';
+                        html += '<div class="day-status">' + this.getDayStatus(cellDate) + '</div>';
+                        html += '</td>';
+
+                        date++;
+                    }
+                }
+
+                html += '</tr>';
+
+                if (date > daysInMonth) {
+                    break;
+                }
+            }
+
+            html += '</tbody></table>';
+            return html;
+        },
+
+        getDayClass: function(date) {
+            var today = new Date();
+            var classes = [];
+
+            if (date.toDateString() === today.toDateString()) {
+                classes.push('today');
+            }
+
+            if (date < today) {
+                classes.push('past');
+            }
+
+            // Check if worker is available on this day
+            var dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+            var schedule = this.getWorkerScheduleForDay(dayName);
+
+            if (schedule && schedule.length > 0) {
+                classes.push('available');
+            } else {
+                classes.push('unavailable');
+            }
+
+            return classes.join(' ');
+        },
+
+        getDayStatus: function(date) {
+            var dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+            var schedule = this.getWorkerScheduleForDay(dayName);
+
+            if (schedule && schedule.length > 0) {
+                return schedule[0].start + '-' + schedule[0].end;
+            }
+
+            return 'Unavailable';
+        },
+
+        getWorkerScheduleForDay: function(dayName) {
+            // This would normally fetch from the current worker's schedule
+            // For now, return a default schedule
+            var defaultSchedule = {
+                'monday': [{ start: '09:00', end: '17:00' }],
+                'tuesday': [{ start: '09:00', end: '17:00' }],
+                'wednesday': [{ start: '09:00', end: '17:00' }],
+                'thursday': [{ start: '09:00', end: '17:00' }],
+                'friday': [{ start: '09:00', end: '17:00' }]
+            };
+
+            return defaultSchedule[dayName] || [];
         },
 
         showLoading: function() {

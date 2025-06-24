@@ -36,7 +36,10 @@ class SchedSpot_Admin_Schedule {
     public function init() {
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
-        
+
+        // Create exceptions table on init
+        add_action( 'admin_init', array( $this, 'create_exceptions_table' ) );
+
         // AJAX handlers
         add_action( 'wp_ajax_schedspot_save_worker_schedule', array( $this, 'handle_save_worker_schedule' ) );
         add_action( 'wp_ajax_schedspot_get_worker_schedule', array( $this, 'handle_get_worker_schedule' ) );
@@ -697,10 +700,15 @@ class SchedSpot_Admin_Schedule {
      *
      * @since 1.7.0
      */
-    private function create_exceptions_table() {
+    public function create_exceptions_table() {
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'schedspot_schedule_exceptions';
+
+        // Check if table already exists
+        if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table_name}'" ) == $table_name ) {
+            return;
+        }
 
         $charset_collate = $wpdb->get_charset_collate();
 
@@ -708,17 +716,23 @@ class SchedSpot_Admin_Schedule {
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             worker_id bigint(20) NOT NULL,
             date date NOT NULL,
-            type varchar(20) NOT NULL,
+            type varchar(20) NOT NULL DEFAULT 'unavailable',
             start_time time DEFAULT NULL,
             end_time time DEFAULT NULL,
             note text,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY worker_id (worker_id),
-            KEY date (date)
+            KEY date (date),
+            UNIQUE KEY worker_date (worker_id, date)
         ) $charset_collate;";
 
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
         dbDelta( $sql );
+
+        // Log table creation for debugging
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            error_log( 'SchedSpot: Schedule exceptions table created or verified: ' . $table_name );
+        }
     }
 }

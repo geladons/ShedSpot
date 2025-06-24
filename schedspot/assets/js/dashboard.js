@@ -37,6 +37,59 @@
      * Initialize availability toggle
      */
     function initAvailabilityToggle() {
+        // Handle new dashboard availability toggle button
+        $('.availability-toggle-btn').on('click', function() {
+            var $button = $(this);
+            var workerId = $button.data('worker-id');
+
+            if (!workerId) {
+                showNotification('Worker ID not found.', 'error');
+                return;
+            }
+
+            $button.prop('disabled', true).text('Updating...');
+
+            $.ajax({
+                url: schedspot_frontend.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'schedspot_toggle_worker_availability',
+                    worker_id: workerId,
+                    nonce: schedspot_frontend.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update availability status
+                        var $status = $('.availability-status');
+                        var $icon = $status.find('.dashicons');
+
+                        if (response.data.is_available) {
+                            $status.removeClass('unavailable').addClass('available');
+                            $status.find('span:not(.dashicons)').text('Available for Bookings');
+                            $icon.removeClass('dashicons-dismiss').addClass('dashicons-yes-alt');
+                            $button.text('Set Unavailable');
+                        } else {
+                            $status.removeClass('available').addClass('unavailable');
+                            $status.find('span:not(.dashicons)').text('Currently Unavailable');
+                            $icon.removeClass('dashicons-yes-alt').addClass('dashicons-dismiss');
+                            $button.text('Set Available');
+                        }
+
+                        showNotification(response.data.message, 'success');
+                    } else {
+                        showNotification(response.data.message || 'Failed to update availability.', 'error');
+                    }
+                },
+                error: function() {
+                    showNotification('Network error. Please try again.', 'error');
+                },
+                complete: function() {
+                    $button.prop('disabled', false);
+                }
+            });
+        });
+
+        // Legacy availability toggle function for backward compatibility
         window.toggleAvailability = function() {
             const restUrl = schedspot_frontend.rest_url + 'workers/' + schedspot_frontend.user_id + '/profile';
             const nonce = schedspot_frontend.nonce;
