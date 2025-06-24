@@ -1,0 +1,331 @@
+/**
+ * SchedSpot Workers Grid Styles
+ * 
+ * @package SchedSpot
+ * @version 1.0.0
+ */
+
+.schedspot-workers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.schedspot-worker-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.schedspot-worker-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border-color: #007cba;
+}
+
+.schedspot-worker-card.available {
+    cursor: pointer;
+}
+
+.schedspot-worker-card.unavailable {
+    opacity: 0.7;
+    background: #f8f9fa;
+}
+
+.schedspot-worker-card.unavailable::after {
+    content: 'Unavailable';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #dc3545;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+.schedspot-worker-card.selected {
+    border-color: #007cba;
+    background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+    box-shadow: 0 4px 16px rgba(0, 124, 186, 0.25);
+}
+
+.schedspot-worker-card.selected::before {
+    content: '✓';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #28a745;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.worker-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px;
+    border: 3px solid #e0e0e0;
+    transition: border-color 0.3s ease;
+}
+
+.schedspot-worker-card:hover .worker-avatar {
+    border-color: #007cba;
+}
+
+.worker-name {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+}
+
+.worker-rating {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.worker-rating .stars {
+    color: #ffa500;
+    font-size: 0.9em;
+}
+
+.worker-rating .rating-text {
+    color: #666;
+    font-size: 0.85em;
+}
+
+.worker-hourly-rate {
+    font-size: 1.1em;
+    font-weight: 700;
+    color: #007cba;
+    margin-bottom: 12px;
+}
+
+.worker-skills {
+    margin-bottom: 15px;
+}
+
+.worker-skills-label {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.worker-skills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.skill-tag {
+    background: #e9ecef;
+    color: #495057;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+.worker-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    font-size: 0.85em;
+    color: #666;
+}
+
+.worker-stats .stat {
+    text-align: center;
+}
+
+.worker-stats .stat-number {
+    font-weight: 600;
+    color: #333;
+    display: block;
+}
+
+.worker-stats .stat-label {
+    font-size: 0.8em;
+    margin-top: 2px;
+}
+
+.worker-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.select-worker-btn {
+    flex: 1;
+    background: linear-gradient(135deg, #007cba 0%, #005a87 100%);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.select-worker-btn:hover {
+    background: linear-gradient(135deg, #005a87 0%, #004066 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 124, 186, 0.3);
+}
+
+.select-worker-btn:active {
+    transform: translateY(0);
+}
+
+.schedspot-worker-card.selected .select-worker-btn {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+}
+
+.schedspot-worker-card.selected .select-worker-btn:hover {
+    background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+}
+
+.message-worker-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.message-worker-btn:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.worker-availability-indicator {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.worker-availability-indicator.available {
+    background: #28a745;
+}
+
+.worker-availability-indicator.busy {
+    background: #ffc107;
+}
+
+.worker-availability-indicator.unavailable {
+    background: #dc3545;
+}
+
+/* Loading state */
+.schedspot-workers-grid.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.workers-loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.workers-loading .dashicons {
+    animation: spin 1s linear infinite;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+/* Empty state */
+.no-workers-available {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    background: #f8f9fa;
+    border: 1px dashed #dee2e6;
+    border-radius: 8px;
+}
+
+.no-workers-available .dashicons {
+    font-size: 48px;
+    color: #ccc;
+    margin-bottom: 15px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .schedspot-workers-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+    }
+    
+    .schedspot-worker-card {
+        padding: 15px;
+    }
+    
+    .worker-actions {
+        flex-direction: column;
+    }
+    
+    .worker-stats {
+        justify-content: space-around;
+    }
+}
+
+@media (max-width: 480px) {
+    .schedspot-workers-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .schedspot-worker-card {
+        padding: 12px;
+    }
+    
+    .worker-avatar {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .worker-name {
+        font-size: 1.1em;
+    }
+    
+    .worker-skills-list {
+        justify-content: center;
+    }
+}
