@@ -46,7 +46,7 @@ class SchedSpot_Shortcodes_Core {
         add_action( 'init', array( $this, 'register_shortcodes' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_shortcode_assets' ) );
         add_filter( 'the_content', array( $this, 'handle_shortcode_navigation' ) );
-        
+
         $this->define_shortcodes();
     }
 
@@ -181,29 +181,29 @@ class SchedSpot_Shortcodes_Core {
      */
     public function enqueue_shortcode_assets() {
         global $post;
-        
+
         if ( ! $post ) {
             return;
         }
-        
+
         $content = $post->post_content;
         $assets_to_load = array();
-        
+
         // Check which shortcodes are present in content
         foreach ( $this->shortcodes as $tag => $config ) {
             if ( has_shortcode( $content, $tag ) ) {
                 $assets_to_load = array_merge( $assets_to_load, $config['assets'] );
             }
         }
-        
+
         // Remove duplicates
         $assets_to_load = array_unique( $assets_to_load );
-        
+
         // Enqueue required assets
         foreach ( $assets_to_load as $asset ) {
             $this->enqueue_asset( $asset );
         }
-        
+
         // Always enqueue common frontend assets if any shortcode is present
         if ( ! empty( $assets_to_load ) ) {
             $this->enqueue_common_assets();
@@ -320,7 +320,7 @@ class SchedSpot_Shortcodes_Core {
         // Handle navigation between shortcodes via URL parameters
         if ( isset( $_GET['schedspot_action'] ) ) {
             $action = sanitize_text_field( $_GET['schedspot_action'] );
-            
+
             switch ( $action ) {
                 case 'booking_form':
                     return do_shortcode( '[schedspot_booking_form]' );
@@ -332,7 +332,7 @@ class SchedSpot_Shortcodes_Core {
                     return do_shortcode( '[schedspot_profile]' );
             }
         }
-        
+
         return $content;
     }
 
@@ -431,21 +431,21 @@ class SchedSpot_Shortcodes_Core {
                 )
             )
         );
-        
+
         $users = get_users( $args );
         $workers = array();
-        
+
         foreach ( $users as $user ) {
             $profile = get_user_meta( $user->ID, 'schedspot_worker_profile', true );
             $assigned_services = get_user_meta( $user->ID, 'schedspot_assigned_services', true );
-            
+
             // Filter by service if specified
             if ( $atts['service_id'] && $assigned_services ) {
                 if ( ! in_array( intval( $atts['service_id'] ), $assigned_services ) ) {
                     continue;
                 }
             }
-            
+
             $workers[] = array(
                 'ID' => $user->ID,
                 'display_name' => $user->display_name,
@@ -456,7 +456,7 @@ class SchedSpot_Shortcodes_Core {
                 'skills' => isset( $profile['skills'] ) ? $profile['skills'] : array(),
             );
         }
-        
+
         return $workers;
     }
 
@@ -467,8 +467,8 @@ class SchedSpot_Shortcodes_Core {
      * @return string Messages URL.
      */
     private function get_messages_url() {
-        // This would typically be a page with the messages shortcode
-        return home_url( '/?schedspot_action=messages' );
+        // Use real WordPress page instead of virtual page
+        return $this->get_page_url( 'schedspot_messages_page', '/messages/' );
     }
 
     /**
@@ -478,8 +478,8 @@ class SchedSpot_Shortcodes_Core {
      * @return string Dashboard URL.
      */
     private function get_dashboard_url() {
-        // This would typically be a page with the dashboard shortcode
-        return home_url( '/?schedspot_action=dashboard' );
+        // Use real WordPress page instead of virtual page
+        return $this->get_page_url( 'schedspot_dashboard_page', '/my-account/' );
     }
 
     /**
@@ -489,8 +489,27 @@ class SchedSpot_Shortcodes_Core {
      * @return string Profile URL.
      */
     private function get_profile_url() {
-        // This would typically be a page with the profile shortcode
-        return home_url( '/?schedspot_action=profile' );
+        // Use real WordPress page instead of virtual page
+        return $this->get_page_url( 'schedspot_profile_page', '/profile/' );
+    }
+
+    /**
+     * Get page URL by option name or fallback slug.
+     *
+     * @since 1.0.0
+     * @param string $option_name Option name storing page ID.
+     * @param string $fallback_slug Fallback slug if page not found.
+     * @return string Page URL.
+     */
+    private function get_page_url( $option_name, $fallback_slug ) {
+        $page_id = get_option( $option_name );
+
+        if ( $page_id && get_post_status( $page_id ) === 'publish' ) {
+            return get_permalink( $page_id );
+        }
+
+        // Fallback to slug-based URL
+        return home_url( $fallback_slug );
     }
 
     /**

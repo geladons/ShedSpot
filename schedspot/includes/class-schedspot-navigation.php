@@ -271,7 +271,7 @@ class SchedSpot_Navigation {
         $items[ __( 'Services', 'schedspot' ) ] = array(
             array(
                 'label' => __( 'Book a Service', 'schedspot' ),
-                'url' => home_url( '/?schedspot_action=booking_form' ),
+                'url' => $this->get_page_url( 'schedspot_booking_page', '/book-service/' ),
                 'icon' => '📅',
             ),
         );
@@ -281,23 +281,23 @@ class SchedSpot_Navigation {
             $items[ __( 'My Account', 'schedspot' ) ] = array(
                 array(
                     'label' => __( 'Dashboard', 'schedspot' ),
-                    'url' => home_url( '/?schedspot_action=dashboard' ),
+                    'url' => $this->get_page_url( 'schedspot_dashboard_page', '/my-account/' ),
                     'icon' => '🏠',
                 ),
                 array(
                     'label' => __( 'My Bookings', 'schedspot' ),
-                    'url' => home_url( '/?schedspot_action=dashboard&view=bookings' ),
+                    'url' => $this->get_page_url( 'schedspot_dashboard_page', '/my-account/' ) . '?view=bookings',
                     'icon' => '📋',
                 ),
                 array(
                     'label' => __( 'Messages', 'schedspot' ),
-                    'url' => home_url( '/?schedspot_action=messages' ),
+                    'url' => $this->get_page_url( 'schedspot_messages_page', '/messages/' ),
                     'icon' => '💬',
                     'badge' => $this->get_unread_messages_count(),
                 ),
                 array(
                     'label' => __( 'Profile & Settings', 'schedspot' ),
-                    'url' => home_url( '/?schedspot_action=profile' ),
+                    'url' => $this->get_page_url( 'schedspot_profile_page', '/profile/' ),
                     'icon' => '⚙️',
                 ),
             );
@@ -307,17 +307,17 @@ class SchedSpot_Navigation {
                 $items[ __( 'Worker Tools', 'schedspot' ) ] = array(
                     array(
                         'label' => __( 'Manage Availability', 'schedspot' ),
-                        'url' => home_url( '/?schedspot_action=profile&tab=availability' ),
+                        'url' => $this->get_page_url( 'schedspot_profile_page', '/profile/' ) . '?tab=availability',
                         'icon' => '📅',
                     ),
                     array(
                         'label' => __( 'Earnings & Payments', 'schedspot' ),
-                        'url' => home_url( '/?schedspot_action=dashboard&view=earnings' ),
+                        'url' => $this->get_page_url( 'schedspot_dashboard_page', '/my-account/' ) . '?view=earnings',
                         'icon' => '💰',
                     ),
                     array(
                         'label' => __( 'Service Settings', 'schedspot' ),
-                        'url' => home_url( '/?schedspot_action=profile&tab=services' ),
+                        'url' => $this->get_page_url( 'schedspot_profile_page', '/profile/' ) . '?tab=services',
                         'icon' => '🛠️',
                     ),
                 );
@@ -364,6 +364,25 @@ class SchedSpot_Navigation {
              WHERE receiver_id = %d AND read_at IS NULL",
             $user_id
         ) );
+    }
+
+    /**
+     * Get page URL by option name or fallback slug.
+     *
+     * @since 1.0.0
+     * @param string $option_name Option name storing page ID.
+     * @param string $fallback_slug Fallback slug if page not found.
+     * @return string Page URL.
+     */
+    private function get_page_url( $option_name, $fallback_slug ) {
+        $page_id = get_option( $option_name );
+
+        if ( $page_id && get_post_status( $page_id ) === 'publish' ) {
+            return get_permalink( $page_id );
+        }
+
+        // Fallback to slug-based URL
+        return home_url( $fallback_slug );
     }
 
     /**

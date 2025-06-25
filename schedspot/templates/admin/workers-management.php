@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         <!-- Edit Worker Form -->
         <div class="schedspot-edit-worker">
             <h2><?php printf( __( 'Edit Worker: %s', 'schedspot' ), esc_html( $editing_worker->display_name ) ); ?></h2>
-            
+
             <form method="post">
                 <?php wp_nonce_field( 'update_worker_' . $editing_worker->ID ); ?>
                 <input type="hidden" name="action" value="update_worker">
@@ -101,7 +101,7 @@ if ( ! defined( 'ABSPATH' ) ) {
             <div class="alignleft actions">
                 <form method="get">
                     <input type="hidden" name="page" value="schedspot-workers">
-                    
+
                     <select name="status">
                         <option value=""><?php _e( 'All Workers', 'schedspot' ); ?></option>
                         <option value="available" <?php selected( $_GET['status'] ?? '', 'available' ); ?>><?php _e( 'Available', 'schedspot' ); ?></option>
@@ -117,7 +117,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
         <form method="post">
             <?php wp_nonce_field( 'bulk-workers' ); ?>
-            
+
             <table class="wp-list-table widefat fixed striped">
                 <thead>
                     <tr>
@@ -227,7 +227,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         <!-- Add New Worker Form -->
         <div class="schedspot-add-worker" style="margin-top: 30px;">
             <h2><?php _e( 'Add New Worker', 'schedspot' ); ?></h2>
-            
+
             <form method="post">
                 <?php wp_nonce_field( 'add_worker' ); ?>
                 <input type="hidden" name="action" value="add_worker">
@@ -276,6 +276,21 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <tr>
                         <th scope="row"><label for="new_worker_address"><?php _e( 'Address', 'schedspot' ); ?></label></th>
                         <td><input type="text" id="new_worker_address" name="worker_address" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="new_assigned_services"><?php _e( 'Assigned Services', 'schedspot' ); ?></label></th>
+                        <td>
+                            <?php if ( ! empty( $services ) ) : ?>
+                                <?php foreach ( $services as $service ) : ?>
+                                    <label>
+                                        <input type="checkbox" name="assigned_services[]" value="<?php echo esc_attr( $service->id ); ?>">
+                                        <?php echo esc_html( $service->name ); ?>
+                                    </label><br>
+                                <?php endforeach; ?>
+                            <?php else : ?>
+                                <p><?php _e( 'No services available. Please create services first.', 'schedspot' ); ?></p>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 </table>
 

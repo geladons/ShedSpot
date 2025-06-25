@@ -61,7 +61,7 @@ class SchedSpot_Worker {
      */
     private function load_worker_data() {
         $this->user = get_userdata( $this->id );
-        
+
         if ( ! $this->user || ! in_array( 'schedspot_worker', $this->user->roles ) ) {
             return false;
         }
@@ -130,7 +130,7 @@ class SchedSpot_Worker {
             if ( in_array( $key, $allowed_fields ) ) {
                 // Sanitize data based on field type
                 $sanitized_value = $this->sanitize_profile_field( $key, $value );
-                
+
                 update_user_meta( $this->id, 'schedspot_' . $key, $sanitized_value );
                 $this->profile[ $key ] = $sanitized_value;
                 $updated = true;
@@ -140,7 +140,7 @@ class SchedSpot_Worker {
         if ( $updated ) {
             // Update profile completion percentage
             $this->update_profile_completion();
-            
+
             // Fire action hook
             do_action( 'schedspot_worker_profile_updated', $this->id, $data );
         }
@@ -161,7 +161,7 @@ class SchedSpot_Worker {
             case 'bio':
             case 'availability_note':
                 return sanitize_textarea_field( $value );
-            
+
             case 'skills':
             case 'service_areas':
             case 'certifications':
@@ -171,16 +171,16 @@ class SchedSpot_Worker {
                     $value = explode( ',', $value );
                 }
                 return array_map( 'sanitize_text_field', (array) $value );
-            
+
             case 'hourly_rate':
                 return floatval( $value );
-            
+
             case 'experience_years':
                 return absint( $value );
-            
+
             case 'is_available':
                 return (bool) $value;
-            
+
             case 'phone':
             case 'address':
             default:
@@ -215,7 +215,7 @@ class SchedSpot_Worker {
         }
 
         $percentage = $total > 0 ? round( ( $completed / $total ) * 100 ) : 0;
-        
+
         update_user_meta( $this->id, 'schedspot_profile_completion', $percentage );
         $this->profile['profile_completion'] = $percentage;
 
@@ -374,7 +374,7 @@ class SchedSpot_Worker {
      */
     public static function create_worker( $user_id, $profile_data = array() ) {
         $user = get_userdata( $user_id );
-        
+
         if ( ! $user ) {
             return new WP_Error( 'user_not_found', __( 'User not found.', 'schedspot' ) );
         }
@@ -485,5 +485,94 @@ class SchedSpot_Worker {
             'services'           => $this->get_services(),
             'member_since'       => date( 'Y-m-d', strtotime( $this->user->user_registered ) ),
         );
+    }
+
+    /**
+     * Get available workers for a service at a specific date and time.
+     *
+     * @since 1.0.0
+     * @param int    $service_id Service ID.
+     * @param string $date       Booking date (Y-m-d format).
+     * @param string $time       Booking time (H:i format).
+     * @return array Available workers.
+     */
+    public static function get_available_workers( $service_id, $date, $time ) {
+        // Get all workers with the schedspot_worker role
+        $args = array(
+            'role' => 'schedspot_worker',
+            'meta_query' => array(
+                array(
+                    'key' => 'schedspot_is_available',
+                    'value' => '1',
+                    'compare' => '='
+                )
+            )
+        );
+
+        $users = get_users( $args );
+        $workers = array();
+
+        foreach ( $users as $user ) {
+            $worker_id = $user->ID;
+
+            // Check if worker is assigned to this service
+            $assigned_services = get_user_meta( $worker_id, 'schedspot_assigned_services', true );
+            if ( ! $assigned_services || ! in_array( intval( $service_id ), $assigned_services ) ) {
+                continue;
+            }
+
+            // Check worker availability for the specific date and time
+            if ( ! self::check_worker_availability( $worker_id, $date, $time ) ) {
+                continue;
+            }
+
+            // Get worker profile data
+            $profile = get_user_meta( $worker_id, 'schedspot_worker_profile', true );
+            if ( ! $profile ) {
+                $profile = array();
+            }
+
+            $workers[] = array(
+                'id' => $worker_id,
+                'name' => $user->display_name,
+                'email' => $user->user_email,
+                'avatar_url' => get_avatar_url( $worker_id ),
+                'bio' => isset( $profile['bio'] ) ? $profile['bio'] : '',
+                'hourly_rate' => isset( $profile['hourly_rate'] ) ? $profile['hourly_rate'] : 0,
+                'rating' => isset( $profile['rating'] ) ? $profile['rating'] : 0,
+                'total_bookings' => isset( $profile['total_bookings'] ) ? $profile['total_bookings'] : 0,
+                'skills' => isset( $profile['skills'] ) ? $profile['skills'] : array(),
+                'experience_years' => isset( $profile['experience_years'] ) ? $profile['experience_years'] : 0,
+            );
+        }
+
+        return $workers;
+    }
+
+    /**
+     * Check if a worker is available at a specific date and time.
+     *
+     * @since 1.0.0
+     * @param int    $worker_id Worker ID.
+     * @param string $date      Booking date (Y-m-d format).
+     * @param string $time      Booking time (H:i format).
+     * @return bool True if available, false otherwise.
+     */
+    public static function check_worker_availability( $worker_id, $date, $time ) {
+        // Check if worker is generally available
+        $is_available = get_user_meta( $worker_id, 'schedspot_is_available', true );
+        if ( $is_available !== '1' ) {
+            return false;
+        }
+
+        // Check for existing bookings at the same time
+        global $wpdb;
+        $existing_booking = $wpdb->get_var( $wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}schedspot_bookings
+             WHERE worker_id = %d AND booking_date = %s AND start_time = %s AND status IN ('pending', 'confirmed')",
+            $worker_id, $date, $time
+        ) );
+
+        return ! $existing_booking;
     }
 }
